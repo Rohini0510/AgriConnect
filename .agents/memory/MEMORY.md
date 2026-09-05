@@ -1,0 +1,1 @@
+- [API contract generation quirks](api-contract-quirks.md) — generated Zod is currently incompatible with OpenAPI integer output; validate numeric fields after codegen.

@@ -1,0 +1,63 @@
+Design the screens for "FPO Onboarding" — a module with two sides: an FPO-facing 
+onboarding/verification flow, and a Farmer-facing FPO discovery/join flow.
+
+SIDE A — FPO App/Portal
+
+1. Onboarding Wizard (multi-step, stepper UI)
+   Step 1 - Basic Info: FPO name, state, district, contact person name, mobile, email
+   Step 2 - Legal Details: registration number (Companies Act / Cooperative Act / LLP),
+   date of incorporation, PAN, GST (optional)
+   Step 3 - Document Upload: certificate of incorporation, bylaws/MoA, PAN card,
+   bank passbook or cancelled cheque, authorized signatory ID — each as an upload
+   card with a status tag (Pending / Under Review / Verified / Rejected + reason)
+   Step 4 - KYC: authorized signatory Aadhaar/PAN + selfie (mock), OTP mobile
+   verification screen
+   Step 5 - Review & Submit: summary of everything entered before final submission
+
+2. FPO Status/Home Screen (post-submission)
+   - Overall verification status banner
+   - Per-document status list, with a "re-upload" action if admin requested it
+
+3. Member Directory (basic version for this module)
+   - Table/list of members: name, village, mobile, landholding, primary crops
+   - "Add Farmer" form (manual entry)
+   - "Bulk Upload CSV" action with a template download link
+   - Auto-generated unique Farmer ID shown per member
+   - Simple stats header: total members, total area under cultivation
+
+SIDE B — Farmer App (FPO discovery & joining)
+
+1. Browse/Search FPOs
+   - Search bar + filters: district, block, village, crop focus (vegetables, fruits,
+   grains, etc.)
+   - Result list as cards: FPO name, location, crop icons, member count
+
+2. FPO Profile View
+   - FPO name, location, crops handled, member count
+   - "Verified FPO" badge
+   - Short plain-language description of what the FPO does (collection, training,
+   market linkages)
+
+3. Join Request Flow
+   - Form: name, village, mobile, landholding (acres), primary crops
+   - OTP verification screen
+   - Confirmation screen showing request status: Pending / Accepted / Rejected
+
+4. Membership Confirmation (once accepted)
+   - Membership ID
+   - FPO contact details (phone, tap-to-call)
+   - "Next steps" card, e.g. "Visit FPO office for KYC & bank details"
+
+ADMIN SIDE (minimal, for demo completeness)
+
+1. FPO List Dashboard
+   - Table of all FPOs with filters: state, status, crop focus
+2. FPO Detail/Review Screen
+   - Uploaded documents shown side by side
+   - Verification checklist
+   - Approve / Reject actions with a reason field
+   - Audit log panel: who verified, when, what changed
+
+Keep it to these screens only — this is a demo scope, not the full app. No color
+or theme guidance needed; match whatever design system is already established
+in the existing Stitch interface.

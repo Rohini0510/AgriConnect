@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "AgriConnect FPO Hub"
+description = "A role-based agriculture platform demo for FPO onboarding, document verification, member management, farmer discovery, and membership requests."
+version = "1.0.0"
+id = "artifacts/agri-connect"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25362
+
+[services.development]
+run = "pnpm --filter @workspace/agri-connect run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/agri-connect", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/agri-connect/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25362"
+BASE_PATH = "/"

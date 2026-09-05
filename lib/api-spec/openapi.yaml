@@ -10,6 +10,16 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: fpos
+    description: FPO discovery and management
+  - name: onboarding
+    description: FPO onboarding workflow
+  - name: members
+    description: FPO member directory
+  - name: join-requests
+    description: Farmer membership requests
+  - name: admin
+    description: FPO review operations
 paths:
   /healthz:
     get:
@@ -24,7 +34,203 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /fpos:
+    get:
+      operationId: listFpos
+      tags: [fpos]
+      summary: List FPOs
+      parameters:
+        - name: search
+          in: query
+          schema: { type: string }
+        - name: state
+          in: query
+          schema: { type: string }
+        - name: district
+          in: query
+          schema: { type: string }
+        - name: crop
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: FPO list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Fpo" }
+  /fpos/{fpoId}:
+    get:
+      operationId: getFpo
+      tags: [fpos]
+      summary: Get an FPO profile
+      parameters:
+        - $ref: "#/components/parameters/FpoId"
+      responses:
+        "200":
+          description: FPO profile
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Fpo" }
+        "404": { description: FPO not found }
+  /fpos/onboarding:
+    post:
+      operationId: submitFpoOnboarding
+      tags: [onboarding]
+      summary: Submit FPO onboarding details
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FpoOnboardingInput" }
+      responses:
+        "201":
+          description: Onboarding submission
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FpoOnboarding" }
+  /fpos/{fpoId}/onboarding:
+    get:
+      operationId: getFpoOnboarding
+      tags: [onboarding]
+      summary: Get onboarding status
+      parameters:
+        - $ref: "#/components/parameters/FpoId"
+      responses:
+        "200":
+          description: Onboarding status
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FpoOnboarding" }
+  /fpos/{fpoId}/members:
+    get:
+      operationId: listMembers
+      tags: [members]
+      summary: List FPO members
+      parameters:
+        - $ref: "#/components/parameters/FpoId"
+      responses:
+        "200":
+          description: Member list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Member" }
+    post:
+      operationId: addMember
+      tags: [members]
+      summary: Add a farmer to an FPO
+      parameters:
+        - $ref: "#/components/parameters/FpoId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MemberInput" }
+      responses:
+        "201":
+          description: Created member
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Member" }
+  /join-requests:
+    post:
+      operationId: createJoinRequest
+      tags: [join-requests]
+      summary: Request to join an FPO
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/JoinRequestInput" }
+      responses:
+        "201":
+          description: Join request
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/JoinRequest" }
+  /join-requests/{requestId}:
+    get:
+      operationId: getJoinRequest
+      tags: [join-requests]
+      summary: Get join request status
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Join request
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/JoinRequest" }
+  /admin/fpos:
+    get:
+      operationId: listAdminFpos
+      tags: [admin]
+      summary: List FPOs for verification
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string }
+        - name: state
+          in: query
+          schema: { type: string }
+        - name: crop
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Admin FPO list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Fpo" }
+  /admin/fpos/{fpoId}:
+    get:
+      operationId: getAdminFpo
+      tags: [admin]
+      summary: Get FPO review details
+      parameters:
+        - $ref: "#/components/parameters/FpoId"
+      responses:
+        "200":
+          description: FPO review details
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FpoReview" }
+  /admin/fpos/{fpoId}/decision:
+    post:
+      operationId: decideFpo
+      tags: [admin]
+      summary: Approve or reject an FPO
+      parameters:
+        - $ref: "#/components/parameters/FpoId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FpoDecisionInput" }
+      responses:
+        "200":
+          description: Updated FPO
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Fpo" }
 components:
+  parameters:
+    FpoId:
+      name: fpoId
+      in: path
+      required: true
+      schema: { type: string }
   schemas:
     HealthStatus:
       type: object
@@ -33,4 +239,141 @@ components:
           type: string
       required:
         - status
+    Fpo:
+      type: object
+      required: [id, name, registrationNumber, state, district, block, villages, crops, memberCount, totalArea, status, description, contactName, contactMobile, documents]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        registrationNumber: { type: string }
+        state: { type: string }
+        district: { type: string }
+        block: { type: string }
+        villages:
+          type: array
+          items: { type: string }
+        crops:
+          type: array
+          items: { type: string }
+        memberCount: { type: number }
+        totalArea: { type: number }
+        status: { type: string, enum: [Pending, Under Review, Verified, Rejected] }
+        description: { type: string }
+        contactName: { type: string }
+        contactMobile: { type: string }
+        documents:
+          type: array
+          items: { $ref: "#/components/schemas/DocumentStatus" }
+    DocumentStatus:
+      type: object
+      required: [id, name, status]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        status: { type: string, enum: [Pending, Under Review, Verified, Rejected] }
+        reason: { type: ["string", "null"] }
+        fileName: { type: ["string", "null"] }
+    FpoOnboardingInput:
+      type: object
+      required: [name, state, district, block, contactName, mobile, email, registrationNumber, incorporationDate, pan, legalAct]
+      properties:
+        name: { type: string }
+        state: { type: string }
+        district: { type: string }
+        block: { type: string }
+        contactName: { type: string }
+        mobile: { type: string }
+        email: { type: string }
+        registrationNumber: { type: string }
+        incorporationDate: { type: string }
+        pan: { type: string }
+        gst: { type: ["string", "null"] }
+        legalAct: { type: string }
+        crops:
+          type: array
+          items: { type: string }
+        documents:
+          type: array
+          items: { $ref: "#/components/schemas/DocumentStatus" }
+    FpoOnboarding:
+      allOf:
+        - $ref: "#/components/schemas/Fpo"
+        - type: object
+          required: [step, submittedAt]
+          properties:
+            step: { type: number }
+            submittedAt: { type: string }
+            legalAct: { type: string }
+            incorporationDate: { type: string }
+            pan: { type: string }
+            gst: { type: ["string", "null"] }
+            email: { type: string }
+    Member:
+      type: object
+      required: [id, farmerId, name, village, mobile, landholding, crops]
+      properties:
+        id: { type: string }
+        farmerId: { type: string }
+        name: { type: string }
+        village: { type: string }
+        mobile: { type: string }
+        landholding: { type: number }
+        crops:
+          type: array
+          items: { type: string }
+    MemberInput:
+      type: object
+      required: [name, village, mobile, landholding, crops]
+      properties:
+        name: { type: string }
+        village: { type: string }
+        mobile: { type: string }
+        landholding: { type: number }
+        crops:
+          type: array
+          items: { type: string }
+    JoinRequestInput:
+      type: object
+      required: [fpoId, name, village, mobile, landholding, crops]
+      properties:
+        fpoId: { type: string }
+        name: { type: string }
+        village: { type: string }
+        mobile: { type: string }
+        landholding: { type: number }
+        crops:
+          type: array
+          items: { type: string }
+    JoinRequest:
+      allOf:
+        - $ref: "#/components/schemas/Member"
+        - type: object
+          required: [requestId, fpoId, status, requestedAt]
+          properties:
+            requestId: { type: string }
+            fpoId: { type: string }
+            status: { type: string, enum: [Pending, Accepted, Rejected] }
+            requestedAt: { type: string }
+    FpoReview:
+      type: object
+      required: [fpo, auditLog]
+      properties:
+        fpo: { $ref: "#/components/schemas/Fpo" }
+        auditLog:
+          type: array
+          items:
+            type: object
+            required: [id, actor, action, at]
+            properties:
+              id: { type: string }
+              actor: { type: string }
+              action: { type: string }
+              at: { type: string }
+              detail: { type: ["string", "null"] }
+    FpoDecisionInput:
+      type: object
+      required: [decision]
+      properties:
+        decision: { type: string, enum: [approve, reject] }
+        reason: { type: ["string", "null"] }
 
