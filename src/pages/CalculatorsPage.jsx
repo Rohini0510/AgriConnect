@@ -41,7 +41,7 @@ export default function CalculatorsPage({ currentLang }) {
       {/* Page Header */}
       <div className="text-center max-w-3xl mx-auto">
         <span className="text-xs font-bold text-emerald-600 uppercase tracking-widest">Financial & Operational Intelligence</span>
-        <h1 className="text-3xl sm:text-4xl font-black text-slate-900 mt-2">AgriConnect Impact Calculators</h1>
+        <h1 className="text-3xl sm:text-4xl font-black text-slate-900 mt-2">Nexora Impact Calculators</h1>
         <p className="text-slate-600 mt-2 font-medium">Estimate net income gains and shared truck freight savings instantly</p>
       </div>
 
