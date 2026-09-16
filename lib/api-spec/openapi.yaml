@@ -20,6 +20,8 @@ tags:
     description: Farmer membership requests
   - name: admin
     description: FPO review operations
+  - name: auth
+    description: Role-based authentication and sessions
 paths:
   /healthz:
     get:
@@ -34,11 +36,49 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /auth/sign-in:
+    post:
+      operationId: signIn
+      tags: [auth]
+      summary: Sign in to a role workspace
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AuthSignInInput" }
+      responses:
+        "200":
+          description: Authenticated session
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthSession" }
+        "400": { description: Invalid sign-in input }
+        "401": { description: Invalid credentials }
+  /auth/session:
+    get:
+      operationId: getAuthSession
+      tags: [auth]
+      summary: Get the current session
+      responses:
+        "200":
+          description: Current session state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthSession" }
+  /auth/sign-out:
+    post:
+      operationId: signOut
+      tags: [auth]
+      summary: Sign out the current session
+      responses:
+        "204": { description: Signed out }
   /fpos:
     get:
       operationId: listFpos
       tags: [fpos]
       summary: List FPOs
+      security:
+        - SessionCookie: []
       parameters:
         - name: search
           in: query
@@ -68,6 +108,8 @@ paths:
       operationId: getFpo
       tags: [fpos]
       summary: Get an FPO profile
+      security:
+        - SessionCookie: []
       parameters:
         - $ref: "#/components/parameters/FpoId"
       responses:
@@ -82,6 +124,8 @@ paths:
       operationId: submitFpoOnboarding
       tags: [onboarding]
       summary: Submit FPO onboarding details
+      security:
+        - SessionCookie: []
       requestBody:
         required: true
         content:
@@ -98,6 +142,8 @@ paths:
       operationId: getFpoOnboarding
       tags: [onboarding]
       summary: Get onboarding status
+      security:
+        - SessionCookie: []
       parameters:
         - $ref: "#/components/parameters/FpoId"
       responses:
@@ -111,6 +157,8 @@ paths:
       operationId: listMembers
       tags: [members]
       summary: List FPO members
+      security:
+        - SessionCookie: []
       parameters:
         - $ref: "#/components/parameters/FpoId"
       responses:
@@ -125,6 +173,8 @@ paths:
       operationId: addMember
       tags: [members]
       summary: Add a farmer to an FPO
+      security:
+        - SessionCookie: []
       parameters:
         - $ref: "#/components/parameters/FpoId"
       requestBody:
@@ -143,6 +193,8 @@ paths:
       operationId: createJoinRequest
       tags: [join-requests]
       summary: Request to join an FPO
+      security:
+        - SessionCookie: []
       requestBody:
         required: true
         content:
@@ -159,6 +211,8 @@ paths:
       operationId: getJoinRequest
       tags: [join-requests]
       summary: Get join request status
+      security:
+        - SessionCookie: []
       parameters:
         - name: requestId
           in: path
@@ -175,6 +229,8 @@ paths:
       operationId: listAdminFpos
       tags: [admin]
       summary: List FPOs for verification
+      security:
+        - SessionCookie: []
       parameters:
         - name: status
           in: query
@@ -198,6 +254,8 @@ paths:
       operationId: getAdminFpo
       tags: [admin]
       summary: Get FPO review details
+      security:
+        - SessionCookie: []
       parameters:
         - $ref: "#/components/parameters/FpoId"
       responses:
@@ -211,6 +269,8 @@ paths:
       operationId: decideFpo
       tags: [admin]
       summary: Approve or reject an FPO
+      security:
+        - SessionCookie: []
       parameters:
         - $ref: "#/components/parameters/FpoId"
       requestBody:
@@ -225,6 +285,11 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Fpo" }
 components:
+  securitySchemes:
+    SessionCookie:
+      type: apiKey
+      in: cookie
+      name: agri_session
   parameters:
     FpoId:
       name: fpoId
@@ -232,6 +297,28 @@ components:
       required: true
       schema: { type: string }
   schemas:
+    AuthUser:
+      type: object
+      required: [id, role, displayName, identity]
+      properties:
+        id: { type: string }
+        role: { type: string, enum: [farmer, fpo, admin] }
+        displayName: { type: string }
+        identity: { type: string }
+    AuthSession:
+      type: object
+      required: [authenticated, user]
+      properties:
+        authenticated: { type: boolean }
+        user: { oneOf: [{ $ref: "#/components/schemas/AuthUser" }, { type: "null" }] }
+    AuthSignInInput:
+      type: object
+      required: [role, identity, password]
+      properties:
+        role: { type: string, enum: [farmer, fpo, admin] }
+        identity: { type: string, minLength: 1 }
+        password: { type: string, minLength: 1 }
+        rememberMe: { type: boolean, default: false }
     HealthStatus:
       type: object
       properties:

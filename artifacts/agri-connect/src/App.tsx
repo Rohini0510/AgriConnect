@@ -1,4 +1,4 @@
-import { type ReactNode, useMemo, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowRight,
@@ -22,6 +22,7 @@ import {
   Landmark,
   LockKeyhole,
   LogIn,
+  LogOut,
   Mail,
   Leaf,
   ListFilter,
@@ -44,11 +45,15 @@ import {
   useGetFpo,
   useGetFpoOnboarding,
   useGetJoinRequest,
+  useGetAuthSession,
   useListAdminFpos,
   useListFpos,
   useListMembers,
   useSubmitFpoOnboarding,
+  useSignIn,
+  useSignOut,
   getGetAdminFpoQueryKey,
+  getGetAuthSessionQueryKey,
   getGetFpoOnboardingQueryKey,
   getGetFpoQueryKey,
   getGetJoinRequestQueryKey,
@@ -59,6 +64,9 @@ import {
   type Fpo,
   type FpoOnboardingInput,
   type Member,
+  type AuthSession,
+  type AuthUser,
+  type AuthSignInInputRole,
 } from '@workspace/api-client-react';
 import {
   Link,
@@ -182,7 +190,8 @@ function Logo({ href = '/workspace', inverse = false }: { href?: string; inverse
   );
 }
 
-function AppShell({ children, role, setRole }: { children: ReactNode; role: Role; setRole: (role: Role) => void }) {
+function AppShell({ children, user, onSignOut }: { children: ReactNode; user: AuthUser; onSignOut: () => void }) {
+  const role = user.role;
   const [mobileNav, setMobileNav] = useState(false);
   const [location] = useLocation();
   const nav = role === 'fpo'
@@ -219,7 +228,7 @@ function AppShell({ children, role, setRole }: { children: ReactNode; role: Role
             </span>
             <div>
               <p className="text-sm font-semibold">{role === 'fpo' ? 'FPO secretary' : role === 'farmer' ? 'Farmer' : 'Review officer'}</p>
-              <p className="text-xs text-sidebar-foreground/55">Demo workspace</p>
+               <p className="text-xs text-sidebar-foreground/55">Signed-in workspace</p>
             </div>
           </div>
         </div>
@@ -254,16 +263,15 @@ function AppShell({ children, role, setRole }: { children: ReactNode; role: Role
             <div className="hidden text-sm text-muted-foreground sm:block">Good morning, <span className="font-semibold text-foreground">{role === 'fpo' ? 'Nandini' : role === 'farmer' ? 'Ravi' : 'Asha'}</span></div>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
-            <div className="hidden items-center rounded-lg border border-border bg-card/70 p-1 sm:flex">
-              {(['fpo', 'farmer', 'admin'] as Role[]).map((item) => (
-                <button key={item} onClick={() => setRole(item)} className={`rounded-md px-2.5 py-1.5 text-xs font-semibold capitalize transition-colors ${role === item ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`} data-testid={`button-switch-role-${item}`}>{item === 'admin' ? 'Reviewer' : item}</button>
-              ))}
-            </div>
+             <span className="hidden text-xs font-semibold text-muted-foreground sm:block">{user.identity}</span>
             <button className="relative rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground" data-testid="button-notifications" onClick={() => window.alert('You are all caught up.')}>
               <Bell className="h-[18px] w-[18px]" />
               <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-accent" />
             </button>
-            <div className="grid h-9 w-9 place-items-center rounded-full bg-[hsl(var(--accent)/.18)] text-sm font-bold text-[hsl(var(--accent))]" data-testid="avatar-current-user">{role === 'fpo' ? 'NG' : role === 'farmer' ? 'RK' : 'AS'}</div>
+             <div className="grid h-9 w-9 place-items-center rounded-full bg-[hsl(var(--accent)/.18)] text-sm font-bold text-[hsl(var(--accent))]" data-testid="avatar-current-user">{user.displayName.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase()}</div>
+             <button onClick={onSignOut} className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground" data-testid="button-sign-out">
+               <LogOut className="h-4 w-4" /> <span className="hidden sm:inline">Sign out</span>
+             </button>
           </div>
         </header>
         <div className="mx-auto max-w-[1440px] px-4 py-7 sm:px-7 lg:px-10 lg:py-9">{children}</div>
@@ -459,7 +467,7 @@ function LandingPage() {
   );
 }
 
-function RoleLogin({ setRole }: { setRole: (role: Role) => void }) {
+function RoleLogin({ onSignedIn }: { onSignedIn: (session: AuthSession) => void }) {
   const { role: rawRole } = useParams<{ role: string }>();
   const [, navigate] = useLocation();
   const role: Role = rawRole === 'fpo' || rawRole === 'admin' ? rawRole : 'farmer';
@@ -467,7 +475,8 @@ function RoleLogin({ setRole }: { setRole: (role: Role) => void }) {
   const [identity, setIdentity] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+  const signIn = useSignIn();
   const Icon = option.icon;
   const isFpo = role === 'fpo';
   const isAdmin = role === 'admin';
@@ -478,9 +487,15 @@ function RoleLogin({ setRole }: { setRole: (role: Role) => void }) {
 
   const submit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setSubmitted(true);
-    setRole(role);
-    window.setTimeout(() => navigate(role === 'fpo' ? '/workspace' : role === 'farmer' ? '/farmer/fpos' : '/admin/fpos'), 220);
+    signIn.mutate(
+      { data: { role: role as AuthSignInInputRole, identity, password, rememberMe } },
+      {
+        onSuccess: (session) => {
+          onSignedIn(session);
+          navigate(role === 'fpo' ? '/workspace' : role === 'farmer' ? '/farmer/fpos' : '/admin/fpos');
+        },
+      },
+    );
   };
 
   return (
@@ -513,29 +528,30 @@ function RoleLogin({ setRole }: { setRole: (role: Role) => void }) {
                 <label className="block">
                   <span className="mb-2 block text-xs font-semibold">{identityLabel}</span>
                   <div className="relative">
-                    <input className="field w-full pl-10 text-sm" value={identity} onChange={(event) => setIdentity(event.target.value)} placeholder={identityPlaceholder} required data-testid={`input-login-${role}-identity`} />
+                   <input className="field w-full pl-10 text-sm" value={identity} onChange={(event) => setIdentity(event.target.value)} placeholder={identityPlaceholder} autoComplete="username" required data-testid={`input-login-${role}-identity`} />
                     {isAdmin ? <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /> : <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />}
                   </div>
                 </label>
                 <label className="block">
                   <span className="mb-2 block text-xs font-semibold">Password</span>
                   <div className="relative">
-                    <input className="field w-full pl-10 pr-11 text-sm" type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter your password" required minLength={4} data-testid={`input-login-${role}-password`} />
+                     <input className="field w-full pl-10 pr-11 text-sm" type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter your password" autoComplete="current-password" required minLength={4} data-testid={`input-login-${role}-password`} />
                     <LockKeyhole className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label={showPassword ? 'Hide password' : 'Show password'}>{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button>
                   </div>
                 </label>
                 <div className="flex items-center justify-between text-xs">
-                  <label className="flex items-center gap-2 text-muted-foreground"><input type="checkbox" className="accent-[hsl(var(--primary))]" /> Keep me signed in</label>
+                   <label className="flex items-center gap-2 text-muted-foreground"><input type="checkbox" className="accent-[hsl(var(--primary))]" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} /> Keep me signed in</label>
                   <button type="button" className="font-semibold text-accent hover:underline">Forgot password?</button>
                 </div>
-                <button type="submit" disabled={submitted} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3.5 text-sm font-semibold text-primary-foreground shadow-sm transition-transform hover:-translate-y-0.5 disabled:opacity-60" data-testid={`button-login-${role}`}>
-                  {submitted ? 'Opening workspace…' : 'Sign in'} <LogIn className="h-4 w-4" />
+                 <button type="submit" disabled={signIn.isPending} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3.5 text-sm font-semibold text-primary-foreground shadow-sm transition-transform hover:-translate-y-0.5 disabled:opacity-60" data-testid={`button-login-${role}`}>
+                   {signIn.isPending ? 'Checking details…' : 'Sign in'} <LogIn className="h-4 w-4" />
                 </button>
               </form>
+               {signIn.isError ? <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-3 text-sm leading-5 text-rose-800" role="alert" data-testid={`text-login-${role}-error`}>That {option.label.toLowerCase()} did not work. Check your {isAdmin ? 'official email or employee ID' : isFpo ? 'registered mobile or email' : 'mobile number'} and password, then try again.</p> : null}
               <div className="mt-6 flex items-start gap-2 rounded-xl border border-[hsl(var(--accent)/.22)] bg-[hsl(var(--accent)/.07)] p-3.5 text-xs leading-5 text-muted-foreground">
                 <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
-                <span>Demo mode: any valid-looking details will open the {option.label.toLowerCase()} workspace.</span>
+                 <span>Your role and session are checked securely before the workspace opens. You can sign out at any time.</span>
               </div>
               <div className="mt-8 border-t border-border pt-6">
                 <p className="text-xs font-semibold text-muted-foreground">Sign in as another role</p>
@@ -575,7 +591,7 @@ function EmptyOrError({ error, label = 'No records found' }: { error?: boolean; 
   );
 }
 
-function Home({ role, setRole }: { role: Role; setRole: (role: Role) => void }) {
+function Home({ role }: { role: Role }) {
   const { data, isLoading, isError } = useListFpos(undefined, { query: { queryKey: getListFposQueryKey(undefined) } });
   const fpos = data?.length ? data : fallbackFpos;
   if (isLoading && !data) return <LoadingPage />;
@@ -591,7 +607,6 @@ function Home({ role, setRole }: { role: Role; setRole: (role: Role) => void }) 
             {role === 'fpo' ? <Link href="/fpo/onboarding" className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-sm hover:opacity-90" data-testid="link-home-primary-action">Continue verification <ArrowRight className="h-4 w-4" /></Link> : null}
             {role === 'farmer' ? <Link href="/farmer/fpos" className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-sm hover:opacity-90" data-testid="link-home-primary-action">Find a verified FPO <ArrowRight className="h-4 w-4" /></Link> : null}
             {role === 'admin' ? <Link href="/admin/fpos" className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-sm hover:opacity-90" data-testid="link-home-primary-action">Open review desk <ArrowRight className="h-4 w-4" /></Link> : null}
-            <button onClick={() => setRole(role === 'fpo' ? 'farmer' : role === 'farmer' ? 'admin' : 'fpo')} className="rounded-xl border border-border bg-card/75 px-4 py-3 text-sm font-semibold text-foreground hover:bg-card" data-testid="button-home-switch-role">Try another view</button>
           </div>
         </div>
         <div className="absolute -right-12 -top-16 hidden h-72 w-72 rounded-full border-[28px] border-accent/15 lg:block" />
@@ -821,17 +836,47 @@ function ReviewDatum({ label, value }: { label: string; value: string }) {
   return <div><p className="text-xs text-muted-foreground">{label}</p><p className="mt-1 text-sm font-semibold leading-5">{value}</p></div>;
 }
 
-function Router({ role, setRole }: { role: Role; setRole: (role: Role) => void }) {
+function Router({ session, onSignedIn, onSignOut }: { session: AuthSession; onSignedIn: (session: AuthSession) => void; onSignOut: () => void }) {
   const [location] = useLocation();
   const isPublic = location === '/' || location.startsWith('/login/');
-  const publicRoutes = <Switch><Route path="/" component={LandingPage} /><Route path="/login/:role" component={() => <RoleLogin setRole={setRole} />} /><Route component={NotFound} /></Switch>;
-  const workspaceRoutes = <AppShell role={role} setRole={setRole}><Switch><Route path="/workspace" component={() => <Home role={role} setRole={setRole} />} /><Route path="/fpo/onboarding" component={FpoOnboarding} /><Route path="/fpo/status" component={FpoStatus} /><Route path="/fpo/members" component={Members} /><Route path="/farmer/fpos" component={FarmerFpos} /><Route path="/farmer/fpos/:id" component={FpoProfile} /><Route path="/farmer/join/:id" component={JoinFpo} /><Route path="/admin/fpos" component={AdminFpos} /><Route path="/admin/fpos/:id" component={AdminDetail} /><Route component={NotFound} /></Switch></AppShell>;
+  const role = session.user?.role;
+  useEffect(() => {
+    if (!isPublic && !session.user) {
+      window.history.replaceState({}, '', '/login/farmer');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    }
+  }, [isPublic, session.user]);
+  const publicRoutes = <Switch><Route path="/" component={LandingPage} /><Route path="/login/:role" component={() => <RoleLogin onSignedIn={onSignedIn} />} /><Route component={NotFound} /></Switch>;
+  const workspaceRoutes = session.user && role ? <AppShell user={session.user} onSignOut={onSignOut}><Switch><Route path="/workspace" component={() => <Home role={role} />} /><Route path="/fpo/onboarding" component={FpoOnboarding} /><Route path="/fpo/status" component={FpoStatus} /><Route path="/fpo/members" component={Members} /><Route path="/farmer/fpos" component={FarmerFpos} /><Route path="/farmer/fpos/:id" component={FpoProfile} /><Route path="/farmer/join/:id" component={JoinFpo} /><Route path="/admin/fpos" component={AdminFpos} /><Route path="/admin/fpos/:id" component={AdminDetail} /><Route component={NotFound} /></Switch></AppShell> : publicRoutes;
   return <ErrorBoundary resetKey={location}>{isPublic ? publicRoutes : workspaceRoutes}</ErrorBoundary>;
 }
 
+function AuthenticatedApp() {
+  const sessionQuery = useGetAuthSession();
+  const signOut = useSignOut();
+  const [sessionOverride, setSessionOverride] = useState<AuthSession | null>(null);
+  const session = sessionOverride ?? sessionQuery.data;
+  const handleSignedIn = (nextSession: AuthSession) => {
+    setSessionOverride(nextSession);
+    queryClient.setQueryData(getGetAuthSessionQueryKey(), nextSession);
+  };
+  const handleSignOut = () => {
+    signOut.mutate(undefined, {
+      onSuccess: () => {
+        const signedOutSession: AuthSession = { authenticated: false, user: null };
+        setSessionOverride(signedOutSession);
+        queryClient.clear();
+        queryClient.setQueryData(getGetAuthSessionQueryKey(), signedOutSession);
+        window.history.replaceState({}, '', '/');
+        window.dispatchEvent(new PopStateEvent('popstate'));
+      },
+    });
+  };
+  return <TooltipProvider><WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>{sessionQuery.isLoading && !session ? <LoadingPage /> : <Router session={session ?? { authenticated: false, user: null }} onSignedIn={handleSignedIn} onSignOut={handleSignOut} />}</WouterRouter><Toaster /></TooltipProvider>;
+}
+
 function App() {
-  const [role, setRole] = useState<Role>('fpo');
-  return <QueryClientProvider client={queryClient}><TooltipProvider><WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}><Router role={role} setRole={setRole} /></WouterRouter><Toaster /></TooltipProvider></QueryClientProvider>;
+  return <QueryClientProvider client={queryClient}><AuthenticatedApp /></QueryClientProvider>;
 }
 
 export default App;

@@ -5,6 +5,45 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export type AuthUserRole = typeof AuthUserRole[keyof typeof AuthUserRole];
+
+
+export const AuthUserRole = {
+  farmer: 'farmer',
+  fpo: 'fpo',
+  admin: 'admin',
+} as const;
+
+export interface AuthUser {
+  id: string;
+  role: AuthUserRole;
+  displayName: string;
+  identity: string;
+}
+
+export interface AuthSession {
+  authenticated: boolean;
+  user: AuthUser | null;
+}
+
+export type AuthSignInInputRole = typeof AuthSignInInputRole[keyof typeof AuthSignInInputRole];
+
+
+export const AuthSignInInputRole = {
+  farmer: 'farmer',
+  fpo: 'fpo',
+  admin: 'admin',
+} as const;
+
+export interface AuthSignInInput {
+  role: AuthSignInInputRole;
+  /** @minLength 1 */
+  identity: string;
+  /** @minLength 1 */
+  password: string;
+  rememberMe?: boolean;
+}
+
 export interface HealthStatus {
   status: string;
 }

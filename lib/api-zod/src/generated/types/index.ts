@@ -6,6 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './authSession';
+export * from './authSignInInput';
+export * from './authSignInInputRole';
+export * from './authUser';
+export * from './authUserRole';
 export * from './documentStatus';
 export * from './documentStatusStatus';
 export * from './fpo';

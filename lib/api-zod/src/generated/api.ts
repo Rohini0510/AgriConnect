@@ -18,6 +18,51 @@ export const HealthCheckResponse = zod.object({
 
 
 /**
+ * @summary Sign in to a role workspace
+ */
+
+
+export const signInBodyRememberMeDefault = false;
+
+export const SignInBody = zod.object({
+  "role": zod.enum(['farmer', 'fpo', 'admin']),
+  "identity": zod.string().min(1),
+  "password": zod.string().min(1),
+  "rememberMe": zod.boolean().default(signInBodyRememberMeDefault)
+})
+
+export const SignInResponse = zod.object({
+  "authenticated": zod.boolean(),
+  "user": zod.union([zod.object({
+  "id": zod.string(),
+  "role": zod.enum(['farmer', 'fpo', 'admin']),
+  "displayName": zod.string(),
+  "identity": zod.string()
+}),zod.null()])
+})
+
+
+/**
+ * @summary Get the current session
+ */
+export const GetAuthSessionResponse = zod.object({
+  "authenticated": zod.boolean(),
+  "user": zod.union([zod.object({
+  "id": zod.string(),
+  "role": zod.enum(['farmer', 'fpo', 'admin']),
+  "displayName": zod.string(),
+  "identity": zod.string()
+}),zod.null()])
+})
+
+
+/**
+ * @summary Sign out the current session
+ */
+export const SignOutResponse = zod.void()
+
+
+/**
  * @summary List FPOs
  */
 export const ListFposQueryParams = zod.object({

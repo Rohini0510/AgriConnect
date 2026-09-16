@@ -14,6 +14,7 @@ import {
   ListMembersParams,
   SubmitFpoOnboardingBody,
 } from "@workspace/api-zod";
+import { requireAuth, requireRole } from "../lib/auth";
 
 type DocumentStatus = {
   id: string;
@@ -142,6 +143,13 @@ let auditLogs: Record<string, { id: string; actor: string; action: string; at: s
 };
 
 const router: IRouter = Router();
+
+router.use(requireAuth());
+router.use("/admin", requireRole("admin"));
+router.use("/fpos/onboarding", requireRole("fpo"));
+router.use("/fpos/:fpoId/onboarding", requireRole("fpo"));
+router.use("/fpos/:fpoId/members", requireRole("fpo"));
+router.use("/join-requests", requireRole("farmer"));
 
 function getFpo(id: string) {
   return fpos.find((fpo) => fpo.id === id);
