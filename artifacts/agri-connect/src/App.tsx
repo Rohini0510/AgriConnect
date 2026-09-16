@@ -2,6 +2,7 @@ import { type ReactNode, useMemo, useState } from 'react';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowRight,
+  ArrowUpRight,
   BadgeCheck,
   Bell,
   Building2,
@@ -11,11 +12,20 @@ import {
   CircleAlert,
   ClipboardCheck,
   Download,
+  Eye,
+  EyeOff,
   FileCheck2,
   FileText,
   Filter,
+  Globe2,
+  Handshake,
+  Landmark,
+  LockKeyhole,
+  LogIn,
+  Mail,
   Leaf,
   ListFilter,
+  Phone,
   MapPin,
   Menu,
   Search,
@@ -158,15 +168,15 @@ function StatusPill({ status }: { status?: string }) {
   );
 }
 
-function Logo() {
+function Logo({ href = '/workspace', inverse = false }: { href?: string; inverse?: boolean }) {
   return (
-    <Link href="/" className="flex items-center gap-3" data-testid="link-logo">
+    <Link href={href} className="flex items-center gap-3" data-testid="link-logo">
       <span className="grid h-10 w-10 place-items-center rounded-xl bg-[hsl(var(--sidebar-primary))] text-[hsl(var(--sidebar-primary-foreground))] shadow-sm">
         <Sprout className="h-5 w-5" strokeWidth={2.4} />
       </span>
       <span>
-        <span className="block font-display text-lg font-bold tracking-tight text-[hsl(var(--sidebar-foreground))]">AgriConnect</span>
-        <span className="block font-mono-app text-[9px] uppercase tracking-[0.22em] text-[hsl(var(--sidebar-foreground)/.58)]">FPO hub</span>
+        <span className={`block font-display text-lg font-bold tracking-tight ${inverse ? 'text-primary' : 'text-[hsl(var(--sidebar-foreground))]'}`}>AgriConnect</span>
+        <span className={`block font-mono-app text-[9px] uppercase tracking-[0.22em] ${inverse ? 'text-muted-foreground' : 'text-[hsl(var(--sidebar-foreground)/.58)]'}`}>FPO hub</span>
       </span>
     </Link>
   );
@@ -177,18 +187,18 @@ function AppShell({ children, role, setRole }: { children: ReactNode; role: Role
   const [location] = useLocation();
   const nav = role === 'fpo'
     ? [
-        { href: '/', label: 'Overview', icon: Building2 },
+        { href: '/workspace', label: 'Overview', icon: Building2 },
         { href: '/fpo/onboarding', label: 'Verification', icon: ClipboardCheck },
         { href: '/fpo/status', label: 'Application status', icon: FileCheck2 },
         { href: '/fpo/members', label: 'Members', icon: Users },
       ]
     : role === 'farmer'
       ? [
-          { href: '/', label: 'My starting point', icon: Tractor },
+          { href: '/workspace', label: 'My starting point', icon: Tractor },
           { href: '/farmer/fpos', label: 'Find an FPO', icon: Search },
         ]
       : [
-          { href: '/', label: 'Review desk', icon: ClipboardCheck },
+          { href: '/workspace', label: 'Review desk', icon: ClipboardCheck },
           { href: '/admin/fpos', label: 'FPO submissions', icon: FileText },
         ];
 
@@ -216,7 +226,7 @@ function AppShell({ children, role, setRole }: { children: ReactNode; role: Role
         <nav className="mt-8 space-y-1.5" aria-label="Main navigation">
           <p className="mb-3 px-3 font-mono-app text-[10px] uppercase tracking-[.18em] text-sidebar-foreground/40">Workspace</p>
           {nav.map(({ href, label, icon: Icon }) => {
-            const active = href === '/' ? location === '/' : location.startsWith(href);
+            const active = href === '/workspace' ? location === '/workspace' : location.startsWith(href);
             return (
               <Link key={href} href={href} onClick={() => setMobileNav(false)} className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors ${active ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-sm' : 'text-sidebar-foreground/72 hover:bg-sidebar-accent hover:text-sidebar-foreground'}`} data-testid={`link-nav-${label.toLowerCase().replaceAll(' ', '-')}`}>
                 <Icon className="h-[18px] w-[18px]" />
@@ -258,6 +268,286 @@ function AppShell({ children, role, setRole }: { children: ReactNode; role: Role
         </header>
         <div className="mx-auto max-w-[1440px] px-4 py-7 sm:px-7 lg:px-10 lg:py-9">{children}</div>
       </main>
+    </div>
+  );
+}
+
+const loginOptions: { role: Role; label: string; eyebrow: string; description: string; icon: typeof Building2; tone: string; href: string }[] = [
+  {
+    role: 'farmer',
+    label: 'Farmer login',
+    eyebrow: 'For individual farmers',
+    description: 'Find a trusted collective, send a join request and keep your membership details in one place.',
+    icon: Tractor,
+    tone: 'bg-[hsl(var(--accent)/.12)] text-accent',
+    href: '/login/farmer',
+  },
+  {
+    role: 'fpo',
+    label: 'FPO login',
+    eyebrow: 'For FPO secretaries',
+    description: 'Complete verification, manage members and give your farmer network a clear public identity.',
+    icon: Building2,
+    tone: 'bg-[hsl(var(--primary)/.1)] text-primary',
+    href: '/login/fpo',
+  },
+  {
+    role: 'admin',
+    label: 'Reviewer / Government',
+    eyebrow: 'For review officers',
+    description: 'Review applications, verify documents and make decisions with a transparent audit trail.',
+    icon: Landmark,
+    tone: 'bg-[hsl(var(--sidebar-primary)/.28)] text-primary',
+    href: '/login/admin',
+  },
+];
+
+function PublicHeader() {
+  return (
+    <header className="relative z-10 flex items-center justify-between px-5 py-5 sm:px-10 lg:px-16">
+      <Logo href="/" inverse />
+      <div className="hidden items-center gap-6 text-sm font-medium text-muted-foreground md:flex">
+        <a href="#how-it-works" className="transition-colors hover:text-foreground">How it works</a>
+        <a href="#login-options" className="transition-colors hover:text-foreground">Choose your role</a>
+        <Link href="/login/farmer" className="inline-flex items-center gap-2 rounded-xl border border-border bg-card/75 px-3.5 py-2.5 text-sm font-semibold text-foreground hover:bg-card">
+          Sign in <ArrowUpRight className="h-4 w-4" />
+        </Link>
+      </div>
+      <Link href="/login/farmer" className="inline-flex items-center gap-2 rounded-xl border border-border bg-card/75 px-3 py-2 text-xs font-semibold md:hidden">
+        Sign in <ArrowUpRight className="h-3.5 w-3.5" />
+      </Link>
+    </header>
+  );
+}
+
+function LandingPage() {
+  return (
+    <div className="grain min-h-[100dvh] overflow-hidden bg-background text-foreground">
+      <PublicHeader />
+      <main>
+        <section className="relative px-5 pb-16 pt-12 sm:px-10 sm:pb-24 sm:pt-16 lg:px-16 lg:pt-20">
+          <div className="absolute -right-20 -top-20 hidden h-80 w-80 rounded-full border-[34px] border-accent/10 lg:block" />
+          <div className="mx-auto grid max-w-[1380px] items-center gap-12 lg:grid-cols-[1.05fr_.95fr] lg:gap-20">
+            <div className="relative z-10 max-w-2xl enter">
+              <div className="inline-flex items-center gap-2 rounded-full border border-[hsl(var(--primary)/.16)] bg-card/80 px-3 py-1.5 text-xs font-semibold text-primary">
+                <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+                A clearer path from farm to market
+              </div>
+              <h1 className="mt-6 max-w-2xl font-display text-5xl font-bold leading-[.98] tracking-[-.06em] text-primary sm:text-7xl">
+                Stronger farms begin with <span className="text-accent">stronger circles.</span>
+              </h1>
+              <p className="mt-6 max-w-xl text-base leading-7 text-muted-foreground sm:text-lg">
+                AgriConnect helps farmers, FPOs and public reviewers work from the same trusted record—so good produce gets a fairer route to the people who need it.
+              </p>
+              <div className="mt-8 flex flex-wrap items-center gap-3">
+                <a href="#login-options" className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-sm transition-transform hover:-translate-y-0.5">
+                  Choose your workspace <ArrowRight className="h-4 w-4" />
+                </a>
+                <a href="#how-it-works" className="inline-flex items-center gap-2 rounded-xl border border-border bg-card/75 px-5 py-3 text-sm font-semibold hover:bg-card">
+                  See how it works
+                </a>
+              </div>
+              <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4 border-t border-border/80 pt-6">
+                {[
+                  ['24', 'verified collectives'],
+                  ['4,816', 'farmers connected'],
+                  ['8', 'states growing together'],
+                ].map(([value, label]) => (
+                  <div key={label}>
+                    <p className="font-display text-2xl font-bold text-primary">{value}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{label}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="relative enter enter-delay-1">
+              <div className="soft-grid relative overflow-hidden rounded-[2rem] border border-[hsl(var(--primary)/.14)] bg-[hsl(var(--primary)/.06)] p-5 sm:p-7">
+                <div className="absolute -right-12 -top-12 h-44 w-44 rounded-full border-[18px] border-accent/15" />
+                <div className="absolute -bottom-24 left-16 h-64 w-64 rounded-full border-[16px] border-primary/10" />
+                <div className="relative z-10 rounded-2xl border border-border bg-card/90 p-5 shadow-xl shadow-primary/5 sm:p-6">
+                  <div className="flex items-center justify-between border-b border-border pb-5">
+                    <div>
+                      <p className="font-mono-app text-[10px] uppercase tracking-[.2em] text-accent">Today in the network</p>
+                      <p className="mt-2 font-display text-xl font-bold">Trust, made visible.</p>
+                    </div>
+                    <span className="grid h-10 w-10 place-items-center rounded-xl bg-[hsl(var(--sidebar-primary)/.75)] text-primary">
+                      <Handshake className="h-5 w-5" />
+                    </span>
+                  </div>
+                  <div className="mt-5 space-y-3">
+                    {[
+                      ['Sahyadri Farmer Producer Company', 'Pune, Maharashtra', 'Verified', 'bg-emerald-100 text-emerald-800'],
+                      ['Pragati Krushi Vikas FPO', 'Nashik, Maharashtra', 'Under review', 'bg-amber-100 text-amber-900'],
+                      ['Narmada Valley Growers', 'Harda, Madhya Pradesh', 'New application', 'bg-muted text-muted-foreground'],
+                    ].map(([name, location, status, tone], index) => (
+                      <div className="flex items-center gap-3 rounded-xl border border-border bg-background/70 p-3" key={name}>
+                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+                          {index === 0 ? <BadgeCheck className="h-4 w-4" /> : index === 1 ? <ClipboardCheck className="h-4 w-4" /> : <Sprout className="h-4 w-4" />}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-semibold">{name}</span>
+                          <span className="mt-1 block truncate text-xs text-muted-foreground">{location}</span>
+                        </span>
+                        <span className={`hidden rounded-full px-2 py-1 text-[10px] font-semibold sm:inline-flex ${tone}`}>{status}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-5 flex items-center gap-3 rounded-xl bg-primary px-4 py-3 text-primary-foreground">
+                    <ShieldCheck className="h-5 w-5 text-sidebar-primary" />
+                    <p className="text-xs leading-5 text-primary-foreground/80">Every application carries its own document trail, status and next step.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="login-options" className="scroll-mt-6 border-y border-border bg-card/45 px-5 py-16 sm:px-10 sm:py-20 lg:px-16">
+          <div className="mx-auto max-w-[1380px]">
+            <div className="max-w-xl">
+              <p className="font-mono-app text-[10px] uppercase tracking-[.2em] text-accent">One shared place, three ways in</p>
+              <h2 className="mt-3 font-display text-3xl font-bold tracking-tight sm:text-4xl">Choose the work you need to do.</h2>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">Sign in to a workspace built around your role. You can switch viewpoints later from inside the demo.</p>
+            </div>
+            <div className="mt-8 grid gap-4 lg:grid-cols-3">
+              {loginOptions.map(({ role, label, eyebrow, description, icon: Icon, tone, href }, index) => (
+                <Link href={href} className={`group panel lift enter enter-delay-${index + 1} relative overflow-hidden p-5 sm:p-6`} key={role} data-testid={`link-login-${role}`}>
+                  <div className="flex items-start justify-between gap-4">
+                    <span className={`grid h-12 w-12 place-items-center rounded-2xl ${tone}`}><Icon className="h-5 w-5" /></span>
+                    <ArrowUpRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:-translate-y-1 group-hover:translate-x-1" />
+                  </div>
+                  <p className="mt-7 font-mono-app text-[10px] uppercase tracking-[.18em] text-muted-foreground">{eyebrow}</p>
+                  <h3 className="mt-2 font-display text-2xl font-bold">{label}</h3>
+                  <p className="mt-3 text-sm leading-6 text-muted-foreground">{description}</p>
+                  <span className="mt-7 inline-flex items-center gap-2 text-sm font-semibold text-accent">Continue to sign in <ArrowRight className="h-4 w-4" /></span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="how-it-works" className="scroll-mt-6 px-5 py-16 sm:px-10 sm:py-20 lg:px-16">
+          <div className="mx-auto grid max-w-[1380px] gap-10 lg:grid-cols-[.8fr_1.2fr] lg:items-center">
+            <div>
+              <p className="font-mono-app text-[10px] uppercase tracking-[.2em] text-accent">How AgriConnect works</p>
+              <h2 className="mt-3 max-w-md font-display text-3xl font-bold leading-tight tracking-tight sm:text-4xl">Small, clear steps build public trust.</h2>
+              <p className="mt-4 max-w-md text-sm leading-6 text-muted-foreground">From the first FPO form to a farmer’s first request, every important action leaves a simple, understandable record.</p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {[
+                ['01', 'Share once', 'FPOs submit their identity and core documents in one guided flow.'],
+                ['02', 'Review clearly', 'Officers see the same details, files and status history.'],
+                ['03', 'Grow together', 'Farmers discover verified collectives and request membership.'],
+              ].map(([number, title, body]) => (
+                <div className="rounded-2xl border border-border bg-card p-5" key={number}>
+                  <span className="font-mono-app text-xs font-semibold text-accent">{number}</span>
+                  <h3 className="mt-8 font-display text-xl font-bold">{title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      </main>
+      <footer className="border-t border-border px-5 py-6 sm:px-10 lg:px-16">
+        <div className="mx-auto flex max-w-[1380px] flex-col gap-2 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+          <p>AgriConnect · FPO hub</p>
+          <p className="flex items-center gap-1.5"><Globe2 className="h-3.5 w-3.5" /> Built for farmer collectives across India</p>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+function RoleLogin({ setRole }: { setRole: (role: Role) => void }) {
+  const { role: rawRole } = useParams<{ role: string }>();
+  const [, navigate] = useLocation();
+  const role: Role = rawRole === 'fpo' || rawRole === 'admin' ? rawRole : 'farmer';
+  const option = loginOptions.find((item) => item.role === role) ?? loginOptions[0];
+  const [identity, setIdentity] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const Icon = option.icon;
+  const isFpo = role === 'fpo';
+  const isAdmin = role === 'admin';
+  const identityLabel = isFpo ? 'Registered mobile or email' : isAdmin ? 'Official email or employee ID' : 'Mobile number';
+  const identityPlaceholder = isFpo ? 'secretary@yourfpo.org' : isAdmin ? 'reviewer@agri.gov.in' : '+91 98765 43210';
+  const heading = isFpo ? 'Welcome back, secretary.' : isAdmin ? 'Welcome to the review desk.' : 'Welcome back, farmer.';
+  const subheading = isFpo ? 'Pick up your FPO journey where you left it.' : isAdmin ? 'Keep every verification decision clear and accountable.' : 'Find your collective and keep your membership close.';
+
+  const submit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSubmitted(true);
+    setRole(role);
+    window.setTimeout(() => navigate(role === 'fpo' ? '/workspace' : role === 'farmer' ? '/farmer/fpos' : '/admin/fpos'), 220);
+  };
+
+  return (
+    <div className="grain min-h-[100dvh] bg-background text-foreground">
+      <div className="mx-auto grid min-h-[100dvh] max-w-[1500px] lg:grid-cols-[.85fr_1.15fr]">
+        <div className="relative hidden overflow-hidden bg-primary p-10 text-primary-foreground lg:flex lg:flex-col lg:justify-between lg:p-14">
+          <div className="absolute -right-28 -top-28 h-80 w-80 rounded-full border-[28px] border-sidebar-primary/15" />
+          <div className="absolute -bottom-20 -left-20 h-64 w-64 rounded-full border-[20px] border-primary-foreground/10" />
+          <div className="relative z-10"><Logo href="/" /></div>
+          <div className="relative z-10 max-w-md">
+            <span className={`grid h-14 w-14 place-items-center rounded-2xl bg-sidebar-primary text-sidebar-primary-foreground shadow-sm`}><Icon className="h-6 w-6" /></span>
+            <p className="mt-8 font-mono-app text-[10px] uppercase tracking-[.2em] text-primary-foreground/55">{option.eyebrow}</p>
+            <h1 className="mt-3 font-display text-4xl font-bold leading-tight">{heading}</h1>
+            <p className="mt-4 max-w-sm text-sm leading-6 text-primary-foreground/70">{subheading}</p>
+          </div>
+          <p className="relative z-10 text-xs text-primary-foreground/45">AgriConnect · Trust, made visible.</p>
+        </div>
+        <div className="flex min-h-[100dvh] flex-col px-5 py-6 sm:px-10 sm:py-10 lg:px-20">
+          <div className="flex items-center justify-between">
+            <Logo href="/" inverse />
+            <Link href="/" className="text-sm font-semibold text-muted-foreground hover:text-foreground">Back to home</Link>
+          </div>
+          <div className="mx-auto flex w-full max-w-md flex-1 items-center py-12">
+            <div className="w-full enter">
+              <div className={`grid h-12 w-12 place-items-center rounded-2xl ${option.tone} lg:hidden`}><Icon className="h-5 w-5" /></div>
+              <p className="mt-6 font-mono-app text-[10px] uppercase tracking-[.2em] text-accent lg:mt-0">{option.eyebrow}</p>
+              <h2 className="mt-3 font-display text-3xl font-bold tracking-tight sm:text-4xl">{heading}</h2>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">{subheading}</p>
+              <form className="mt-8 space-y-5" onSubmit={submit}>
+                <label className="block">
+                  <span className="mb-2 block text-xs font-semibold">{identityLabel}</span>
+                  <div className="relative">
+                    <input className="field w-full pl-10 text-sm" value={identity} onChange={(event) => setIdentity(event.target.value)} placeholder={identityPlaceholder} required data-testid={`input-login-${role}-identity`} />
+                    {isAdmin ? <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /> : <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />}
+                  </div>
+                </label>
+                <label className="block">
+                  <span className="mb-2 block text-xs font-semibold">Password</span>
+                  <div className="relative">
+                    <input className="field w-full pl-10 pr-11 text-sm" type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter your password" required minLength={4} data-testid={`input-login-${role}-password`} />
+                    <LockKeyhole className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label={showPassword ? 'Hide password' : 'Show password'}>{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button>
+                  </div>
+                </label>
+                <div className="flex items-center justify-between text-xs">
+                  <label className="flex items-center gap-2 text-muted-foreground"><input type="checkbox" className="accent-[hsl(var(--primary))]" /> Keep me signed in</label>
+                  <button type="button" className="font-semibold text-accent hover:underline">Forgot password?</button>
+                </div>
+                <button type="submit" disabled={submitted} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3.5 text-sm font-semibold text-primary-foreground shadow-sm transition-transform hover:-translate-y-0.5 disabled:opacity-60" data-testid={`button-login-${role}`}>
+                  {submitted ? 'Opening workspace…' : 'Sign in'} <LogIn className="h-4 w-4" />
+                </button>
+              </form>
+              <div className="mt-6 flex items-start gap-2 rounded-xl border border-[hsl(var(--accent)/.22)] bg-[hsl(var(--accent)/.07)] p-3.5 text-xs leading-5 text-muted-foreground">
+                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+                <span>Demo mode: any valid-looking details will open the {option.label.toLowerCase()} workspace.</span>
+              </div>
+              <div className="mt-8 border-t border-border pt-6">
+                <p className="text-xs font-semibold text-muted-foreground">Sign in as another role</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {loginOptions.filter((item) => item.role !== role).map((item) => <Link href={item.href} className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold hover:bg-muted" key={item.role}>{item.role === 'admin' ? 'Reviewer / Government' : item.label}</Link>)}
+                </div>
+              </div>
+            </div>
+          </div>
+          <p className="text-center text-xs text-muted-foreground">By continuing, you agree to use AgriConnect for your collective’s work.</p>
+        </div>
+      </div>
     </div>
   );
 }
@@ -532,7 +822,11 @@ function ReviewDatum({ label, value }: { label: string; value: string }) {
 }
 
 function Router({ role, setRole }: { role: Role; setRole: (role: Role) => void }) {
-  return <ErrorBoundary resetKey={location.pathname}><AppShell role={role} setRole={setRole}><Switch><Route path="/" component={() => <Home role={role} setRole={setRole} />} /><Route path="/fpo/onboarding" component={FpoOnboarding} /><Route path="/fpo/status" component={FpoStatus} /><Route path="/fpo/members" component={Members} /><Route path="/farmer/fpos" component={FarmerFpos} /><Route path="/farmer/fpos/:id" component={FpoProfile} /><Route path="/farmer/join/:id" component={JoinFpo} /><Route path="/admin/fpos" component={AdminFpos} /><Route path="/admin/fpos/:id" component={AdminDetail} /><Route component={NotFound} /></Switch></AppShell></ErrorBoundary>;
+  const [location] = useLocation();
+  const isPublic = location === '/' || location.startsWith('/login/');
+  const publicRoutes = <Switch><Route path="/" component={LandingPage} /><Route path="/login/:role" component={() => <RoleLogin setRole={setRole} />} /><Route component={NotFound} /></Switch>;
+  const workspaceRoutes = <AppShell role={role} setRole={setRole}><Switch><Route path="/workspace" component={() => <Home role={role} setRole={setRole} />} /><Route path="/fpo/onboarding" component={FpoOnboarding} /><Route path="/fpo/status" component={FpoStatus} /><Route path="/fpo/members" component={Members} /><Route path="/farmer/fpos" component={FarmerFpos} /><Route path="/farmer/fpos/:id" component={FpoProfile} /><Route path="/farmer/join/:id" component={JoinFpo} /><Route path="/admin/fpos" component={AdminFpos} /><Route path="/admin/fpos/:id" component={AdminDetail} /><Route component={NotFound} /></Switch></AppShell>;
+  return <ErrorBoundary resetKey={location}>{isPublic ? publicRoutes : workspaceRoutes}</ErrorBoundary>;
 }
 
 function App() {
