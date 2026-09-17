@@ -13,4 +13,5 @@ export const AuthSignInInputRole = {
   farmer: 'farmer',
   fpo: 'fpo',
   admin: 'admin',
+  buyer: 'buyer',
 } as const;

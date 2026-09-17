@@ -12,6 +12,7 @@ export const AuthUserRole = {
   farmer: 'farmer',
   fpo: 'fpo',
   admin: 'admin',
+  buyer: 'buyer',
 } as const;
 
 export interface AuthUser {
@@ -33,6 +34,7 @@ export const AuthSignInInputRole = {
   farmer: 'farmer',
   fpo: 'fpo',
   admin: 'admin',
+  buyer: 'buyer',
 } as const;
 
 export interface AuthSignInInput {

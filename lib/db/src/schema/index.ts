@@ -1,6 +1,6 @@
 import { index, pgEnum, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
-export const authRoleEnum = pgEnum("auth_role", ["farmer", "fpo", "admin"]);
+export const authRoleEnum = pgEnum("auth_role", ["farmer", "fpo", "admin", "buyer"]);
 
 export const authSessions = pgTable(
   "auth_sessions",

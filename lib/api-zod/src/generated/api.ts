@@ -25,7 +25,7 @@ export const HealthCheckResponse = zod.object({
 export const signInBodyRememberMeDefault = false;
 
 export const SignInBody = zod.object({
-  "role": zod.enum(['farmer', 'fpo', 'admin']),
+  "role": zod.enum(['farmer', 'fpo', 'admin', 'buyer']),
   "identity": zod.string().min(1),
   "password": zod.string().min(1),
   "rememberMe": zod.boolean().default(signInBodyRememberMeDefault)
@@ -35,7 +35,7 @@ export const SignInResponse = zod.object({
   "authenticated": zod.boolean(),
   "user": zod.union([zod.object({
   "id": zod.string(),
-  "role": zod.enum(['farmer', 'fpo', 'admin']),
+  "role": zod.enum(['farmer', 'fpo', 'admin', 'buyer']),
   "displayName": zod.string(),
   "identity": zod.string()
 }),zod.null()])
@@ -49,7 +49,7 @@ export const GetAuthSessionResponse = zod.object({
   "authenticated": zod.boolean(),
   "user": zod.union([zod.object({
   "id": zod.string(),
-  "role": zod.enum(['farmer', 'fpo', 'admin']),
+  "role": zod.enum(['farmer', 'fpo', 'admin', 'buyer']),
   "displayName": zod.string(),
   "identity": zod.string()
 }),zod.null()])

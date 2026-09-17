@@ -302,7 +302,7 @@ components:
       required: [id, role, displayName, identity]
       properties:
         id: { type: string }
-        role: { type: string, enum: [farmer, fpo, admin] }
+        role: { type: string, enum: [farmer, fpo, admin, buyer] }
         displayName: { type: string }
         identity: { type: string }
     AuthSession:
@@ -315,7 +315,7 @@ components:
       type: object
       required: [role, identity, password]
       properties:
-        role: { type: string, enum: [farmer, fpo, admin] }
+        role: { type: string, enum: [farmer, fpo, admin, buyer] }
         identity: { type: string, minLength: 1 }
         password: { type: string, minLength: 1 }
         rememberMe: { type: boolean, default: false }

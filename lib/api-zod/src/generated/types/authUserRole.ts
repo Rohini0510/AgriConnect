@@ -13,4 +13,5 @@ export const AuthUserRole = {
   farmer: 'farmer',
   fpo: 'fpo',
   admin: 'admin',
+  buyer: 'buyer',
 } as const;

@@ -9,7 +9,7 @@ import { eq, lt } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { authSessions } from "@workspace/db/schema";
 
-export type AuthRole = "farmer" | "fpo" | "admin";
+export type AuthRole = "farmer" | "fpo" | "admin" | "buyer";
 
 export type AuthUser = {
   id: string;
@@ -53,8 +53,10 @@ function passwordFor(role: AuthRole): string {
     ? "FPO_LOGIN_PASSWORD"
     : role === "admin"
       ? "REVIEWER_LOGIN_PASSWORD"
-      : "FARMER_LOGIN_PASSWORD";
-  return process.env[envKey] ?? (role === "fpo" ? "fpo123" : role === "admin" ? "review123" : "farmer123");
+      : role === "buyer"
+        ? "BUYER_LOGIN_PASSWORD"
+        : "FARMER_LOGIN_PASSWORD";
+  return process.env[envKey] ?? (role === "fpo" ? "fpo123" : role === "admin" ? "review123" : role === "buyer" ? "buyer123" : "farmer123");
 }
 
 function identityFor(role: AuthRole): string {
@@ -62,13 +64,17 @@ function identityFor(role: AuthRole): string {
     ? "FPO_LOGIN_IDENTITY"
     : role === "admin"
       ? "REVIEWER_LOGIN_IDENTITY"
-      : "FARMER_LOGIN_IDENTITY";
+      : role === "buyer"
+        ? "BUYER_LOGIN_IDENTITY"
+        : "FARMER_LOGIN_IDENTITY";
   return process.env[envKey] ?? (
     role === "fpo"
       ? "secretary@sahyadrifpo.in"
       : role === "admin"
         ? "reviewer@agri.gov.in"
-        : "+91 98765 43210"
+        : role === "buyer"
+          ? "buyer@amulyaagri.in"
+          : "+91 98765 43210"
   );
 }
 
@@ -94,6 +100,7 @@ const accounts: Account[] = [
   createAccount("farmer-ravi", "farmer", "Ravi Kumar"),
   createAccount("fpo-nandini", "fpo", "Nandini Gowda"),
   createAccount("reviewer-asha", "admin", "Asha Menon"),
+  createAccount("buyer-meera", "buyer", "Meera Iyer"),
 ];
 
 function publicUser(account: Account): AuthUser {
