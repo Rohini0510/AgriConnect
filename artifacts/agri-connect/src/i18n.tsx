@@ -423,6 +423,8 @@ const en = {
   'chat.statusOnline': 'Online · AgriConnect AI Support',
   'chat.typing': 'Typing response…',
   'chat.clear': 'Clear chat',
+  'chat.voiceCommand': 'Voice command',
+  'chat.listening': 'Listening…',
 } as const;
 
 export type TKey = keyof typeof en;
@@ -846,6 +848,8 @@ const hi: Record<TKey, string> = {
   'chat.statusOnline': 'ऑनलाइन · AgriConnect AI सहायता',
   'chat.typing': 'उत्तर लिखा जा रहा है…',
   'chat.clear': 'चैट साफ़ करें',
+  'chat.voiceCommand': 'वॉइस कमांड',
+  'chat.listening': 'सुन रहा हूँ…',
 };
 
 const mr: Record<TKey, string> = {
@@ -1267,6 +1271,8 @@ const mr: Record<TKey, string> = {
   'chat.statusOnline': 'ऑनलाइन · AgriConnect AI मदत',
   'chat.typing': 'उत्तर टाईप करत आहे…',
   'chat.clear': 'चॅट साफ करा',
+  'chat.voiceCommand': 'व्हॉइस कमांड',
+  'chat.listening': 'ऐकत आहे…',
 };
 
 export const locales: { code: Locale; label: string }[] = [
@@ -1296,6 +1302,7 @@ export const entityMap: Record<string, { hi: string; mr: string }> = {
   'Red Onion': { hi: 'लाल प्याज (Red Onion)', mr: 'लाल कांदा (Red Onion)' },
   'Green Chilli': { hi: 'हरी मिर्च (Green Chilli)', mr: 'हिरवी मिरची (Green Chilli)' },
   'Pomegranate': { hi: 'अनार (Pomegranate)', mr: 'डाळिंब (Pomegranate)' },
+  'Groundnut': { hi: 'मूंगफली (Groundnut)', mr: 'शेंगदाणा (Groundnut)' },
 
   // Statuses
   'Verified': { hi: 'सत्यापित', mr: 'सत्यापित' },
@@ -1314,6 +1321,9 @@ interface LangContextValue {
   localizeState: (state: string) => string;
   localizeCrop: (crop: string) => string;
   localizeStatus: (status: string) => string;
+  localize: (text: string) => string;
+  localizeFpo: (name: string) => string;
+  localizeName: (name: string) => string;
 }
 
 const LangContext = createContext<LangContextValue | null>(null);
@@ -1347,6 +1357,9 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     localizeState: (state) => (locale === 'en' ? state : entityMap[state]?.[locale] ?? state),
     localizeCrop: (crop) => (locale === 'en' ? crop : entityMap[crop]?.[locale] ?? crop),
     localizeStatus: (status) => (locale === 'en' ? status : entityMap[status]?.[locale] ?? status),
+    localize: (text) => (locale === 'en' ? text : entityMap[text]?.[locale] ?? text),
+    localizeFpo: (name) => (locale === 'en' ? name : entityMap[name]?.[locale] ?? name),
+    localizeName: (name) => (locale === 'en' ? name : entityMap[name]?.[locale] ?? name),
   };
   return <LangContext.Provider value={value}>{children}</LangContext.Provider>;
 }

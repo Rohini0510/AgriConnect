@@ -44,6 +44,7 @@ import {
   MapPin,
   Menu,
   MessageCircle,
+  Mic,
   Receipt,
   Scale,
   Search,
@@ -182,7 +183,7 @@ const fallbackMembers: Member[] = [
 ];
 
 const states = ['Karnataka', 'Maharashtra', 'Madhya Pradesh', 'Odisha', 'Tamil Nadu'];
-const cropOptions = ['Sugarcane', 'Ragi', 'Coconut', 'Millets', 'Tur dal', 'Soybean', 'Wheat', 'Chickpea'];
+const cropOptions = ['Sugarcane', 'Ragi', 'Coconut', 'Millets', 'Tur dal', 'Soybean', 'Wheat', 'Chickpea', 'Groundnut'];
 
 const buyerNodes = ['Karad node', 'Maddur node', 'Timarni node', 'Umbraj node', 'Malavalli node'];
 const inr = (value: number) => `₹${value.toLocaleString('en-IN')}`;
@@ -1024,7 +1025,7 @@ function FarmerFpos() {
 }
 
 function FpoCard({ fpo, index }: { fpo: Fpo; index?: number }) {
-  const { t, localizeState, localizeCrop } = useLang();
+  const { t, localizeState, localizeCrop, localizeFpo, localize } = useLang();
   return (
     <Link
       href={`/farmer/fpos/${fpo.id}`}
@@ -1038,9 +1039,9 @@ function FpoCard({ fpo, index }: { fpo: Fpo; index?: number }) {
           </span>
           <StatusPill status={fpo.status} />
         </div>
-        <h2 className="mt-5 font-display text-xl font-bold leading-tight">{fpo.name}</h2>
+        <h2 className="mt-5 font-display text-xl font-bold leading-tight">{localizeFpo(fpo.name)}</h2>
         <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
-          <MapPin className="h-3.5 w-3.5 shrink-0 text-accent" /> {fpo.block}, {fpo.district}, {localizeState(fpo.state)}
+          <MapPin className="h-3.5 w-3.5 shrink-0 text-accent" /> {localize(fpo.block)}, {localize(fpo.district)}, {localizeState(fpo.state)}
         </p>
         <p className="mt-3.5 line-clamp-2 text-sm leading-relaxed text-muted-foreground">{fpo.description}</p>
         <div className="mt-4 flex flex-wrap gap-1.5">
@@ -1070,7 +1071,7 @@ function FpoCard({ fpo, index }: { fpo: Fpo; index?: number }) {
 
 function FpoProfile() {
   const { id = 'fpo-1' } = useParams<{ id: string }>();
-  const { t, localizeState, localizeCrop } = useLang();
+  const { t, localizeState, localizeCrop, localizeFpo, localizeName, localize } = useLang();
   const { data, isLoading } = useGetFpo(id, { query: { enabled: Boolean(id), queryKey: getGetFpoQueryKey(id) } });
   const fpo = data && typeof data === 'object' ? data : fallbackFpos.find((item) => item.id === id) || fallbackFpos[0];
   if (isLoading && !data) return <LoadingPage />;
@@ -1088,9 +1089,9 @@ function FpoProfile() {
               </span>
               <div>
                 <StatusPill status={fpo.status} />
-                <h1 className="mt-3 max-w-xl font-display text-3xl font-bold tracking-tight">{fpo.name}</h1>
-                <p className="mt-2 flex items-center gap-1.5 text-sm text-primary-foreground/70">
-                  <MapPin className="h-4 w-4" /> {fpo.block}, {fpo.district}, {localizeState(fpo.state)}
+                 <h1 className="mt-3 max-w-xl font-display text-3xl font-bold tracking-tight">{localizeFpo(fpo.name)}</h1>
+                 <p className="mt-2 flex items-center gap-1.5 text-sm text-primary-foreground/70">
+                   <MapPin className="h-4 w-4" /> {localize(fpo.block)}, {localize(fpo.district)}, {localizeState(fpo.state)}
                 </p>
               </div>
             </div>
@@ -1124,7 +1125,7 @@ function FpoProfile() {
             <div className="mt-5 space-y-5">
               <div>
                 <p className="text-xs text-muted-foreground">{t('fpos.secretary')}</p>
-                <p className="mt-1 text-sm font-semibold">{fpo.contactName}</p>
+                <p className="mt-1 text-sm font-semibold">{localizeName(fpo.contactName)}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">{t('fpos.phone')}</p>
@@ -1132,7 +1133,7 @@ function FpoProfile() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">{t('fpos.villagesServed')}</p>
-                <p className="mt-1 text-sm font-semibold leading-6">{fpo.villages.join(' · ')}</p>
+                <p className="mt-1 text-sm font-semibold leading-6">{fpo.villages.map((v) => localize(v)).join(' · ')}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">{t('fpos.registration')}</p>
@@ -1152,7 +1153,7 @@ function Metric({ label, value }: { label: string; value: string }) {
 
 function JoinFpo() {
   const { id = 'fpo-1' } = useParams<{ id: string }>();
-  const { t, localizeState, localizeCrop } = useLang();
+  const { t, localizeState, localizeCrop, localizeFpo, localize } = useLang();
   const fpo = fallbackFpos.find((item) => item.id === id) || fallbackFpos[0];
   const [stage, setStage] = useState<'details' | 'otp' | 'done'>('details');
   const [otp, setOtp] = useState('');
@@ -1164,18 +1165,18 @@ function JoinFpo() {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <Link href={`/farmer/fpos/${fpo.id}`} className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground" data-testid="link-back-profile">
-        <ChevronLeft className="h-4 w-4" /> {t('fpos.backTo', { name: fpo.name })}
+        <Link href={`/farmer/fpos/${fpo.id}`} className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground" data-testid="link-back-profile">
+        <ChevronLeft className="h-4 w-4" /> {t('fpos.backTo', { name: localizeFpo(fpo.name) })}
       </Link>
       <div className="grid gap-6 lg:grid-cols-[.75fr_1.25fr]">
         <div className="rounded-2xl bg-primary p-6 text-primary-foreground sm:p-8">
           <p className="font-mono-app text-[10px] uppercase tracking-[.18em] text-primary-foreground/55">{t('fpos.membershipRequest')}</p>
           <h1 className="mt-5 font-display text-3xl font-bold leading-tight">{t('fpos.joinTitle')}</h1>
-          <p className="mt-4 text-sm leading-6 text-primary-foreground/70">{t('fpos.joinSubtitle', { name: fpo.name })}</p>
+          <p className="mt-4 text-sm leading-6 text-primary-foreground/70">{t('fpos.joinSubtitle', { name: localizeFpo(fpo.name) })}</p>
           <div className="mt-10 border-t border-primary-foreground/15 pt-5">
             <p className="text-xs text-primary-foreground/55">{t('fpos.joining')}</p>
-            <p className="mt-1 text-sm font-semibold">{fpo.name}</p>
-            <p className="mt-1 text-xs text-primary-foreground/60">{fpo.district}, {localizeState(fpo.state)}</p>
+            <p className="mt-1 text-sm font-semibold">{localizeFpo(fpo.name)}</p>
+            <p className="mt-1 text-xs text-primary-foreground/60">{localize(fpo.district)}, {localizeState(fpo.state)}</p>
           </div>
         </div>
         <div className="panel p-6 sm:p-8">
@@ -1228,7 +1229,7 @@ function JoinFpo() {
 }
 
 function JoinConfirmation({ requestId, fpo }: { requestId: string; fpo: Fpo }) {
-  const { t, localizeStatus } = useLang();
+  const { t, localizeStatus, localizeFpo } = useLang();
   const { data } = useGetJoinRequest(requestId || 'pending', { query: { enabled: Boolean(requestId), queryKey: getGetJoinRequestQueryKey(requestId || 'pending') } });
   return (
     <div className="py-4 text-center">
@@ -1237,7 +1238,7 @@ function JoinConfirmation({ requestId, fpo }: { requestId: string; fpo: Fpo }) {
       </span>
       <p className="mt-6 font-mono-app text-[10px] uppercase tracking-[.2em] text-accent">{t('fpos.requestSentPill')}</p>
       <h2 className="mt-2 font-display text-3xl font-bold">{t('fpos.requestSentTitle')}</h2>
-      <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-muted-foreground">{t('fpos.requestSentBody', { name: fpo.name })}</p>
+      <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-muted-foreground">{t('fpos.requestSentBody', { name: localizeFpo(fpo.name) })}</p>
       <div className="mx-auto mt-7 max-w-sm rounded-xl bg-muted/60 p-4 text-left">
         <p className="text-xs text-muted-foreground">{t('fpos.requestRef')}</p>
         <p className="mt-1 font-mono-app text-sm font-semibold">{data?.requestId || requestId || 'Pending'}</p>
@@ -2706,9 +2707,11 @@ function Chatbot() {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const listRef = useRef<HTMLDivElement>(null);
   const replyTimer = useRef<number | undefined>(undefined);
+  const recognitionRef = useRef<any>(null);
 
   const getCurrentTime = () => {
     const d = new Date();
@@ -2727,6 +2730,45 @@ function Chatbot() {
   }, [messages, open, isTyping]);
 
   useEffect(() => () => window.clearTimeout(replyTimer.current), []);
+
+  useEffect(() => {
+    const SpeechRecognitionConstructor = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognitionConstructor) return;
+    const rec = new SpeechRecognitionConstructor() as any;
+    rec.continuous = false;
+    rec.interimResults = false;
+    rec.maxAlternatives = 1;
+    rec.lang = locale === 'mr' ? 'mr-IN' : locale === 'hi' ? 'hi-IN' : 'en-IN';
+    rec.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript.trim();
+      if (transcript) setInput(transcript);
+      setIsListening(false);
+    };
+    rec.onerror = () => setIsListening(false);
+    rec.onend = () => setIsListening(false);
+    recognitionRef.current = rec;
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.abort();
+      }
+    };
+  }, [locale]);
+
+  const toggleListening = () => {
+    const rec = recognitionRef.current;
+    if (!rec) return;
+    if (isListening) {
+      rec.stop();
+      setIsListening(false);
+    } else {
+      try {
+        rec.start();
+        setIsListening(true);
+      } catch {
+        setIsListening(false);
+      }
+    }
+  };
 
   const quickReplies: { label: string; reply: string }[] = [
     { label: t('chat.quick1'), reply: t('chat.replyPayment') },
@@ -2851,6 +2893,15 @@ function Chatbot() {
               className="field h-10 w-full text-xs"
               data-testid="input-chatbot"
             />
+            <button
+              type="button"
+              onClick={toggleListening}
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-40 shadow-sm transition-opacity"
+              aria-label={isListening ? t('chat.listening') : t('chat.voiceCommand')}
+              data-testid="button-chatbot-voice"
+            >
+              <Mic className={`h-4 w-4 ${isListening ? 'animate-pulse text-red-400' : ''}`} />
+            </button>
             <button
               type="submit"
               className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-40 shadow-sm transition-opacity"
