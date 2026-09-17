@@ -493,6 +493,19 @@
       linear-gradient(90deg, hsl(var(--primary) / 0.055) 1px, transparent 1px);
     background-size: 22px 22px;
   }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
 }
 
 @keyframes enter {
@@ -505,3 +518,4 @@
     transform: translateY(0);
   }
 }
+
