@@ -296,10 +296,12 @@ function statusTone(status?: string) {
 }
 
 function StatusPill({ status }: { status?: string }) {
+  const { localizeStatus } = useLang();
+  const rawStatus = status || 'Pending';
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${statusTone(status)}`} data-testid={`status-${status?.toLowerCase().replaceAll(' ', '-')}`}>
-      {status === 'Verified' ? <BadgeCheck className="h-3.5 w-3.5" /> : null}
-      {status || 'Pending'}
+    <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${statusTone(status)}`} data-testid={`status-${rawStatus.toLowerCase().replaceAll(' ', '-')}`}>
+      {rawStatus === 'Verified' ? <BadgeCheck className="h-3.5 w-3.5" /> : null}
+      {localizeStatus ? localizeStatus(rawStatus) : rawStatus}
     </span>
   );
 }
@@ -939,25 +941,209 @@ function ModalActions({ onCancel, onConfirm, loading, confirm, disabled }: { onC
 }
 
 function FarmerFpos() {
+  const { t, localizeState, localizeCrop } = useLang();
   const [search, setSearch] = useState('');
   const [state, setState] = useState('');
   const [crop, setCrop] = useState('');
   const params = { search: search || undefined, state: state || undefined, crop: crop || undefined };
   const { data, isLoading, isError } = useListFpos(params, { query: { queryKey: getListFposQueryKey(params) } });
   const fpos = (Array.isArray(data) && data.length ? data : fallbackFpos).filter((fpo) => (!search || `${fpo.name} ${fpo.district}`.toLowerCase().includes(search.toLowerCase())) && (!state || fpo.state === state) && (!crop || fpo.crops.includes(crop)));
-  return <div><PageHeader eyebrow="Farmer / discovery" title="Find a collective near you." description="Explore verified farmer producer organisations, understand their work and request membership when it feels right." /><div className="panel mb-6 p-4 sm:p-5"><div className="grid gap-3 md:grid-cols-[1.5fr_1fr_1fr_auto]"><label className="relative block"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><input className="field w-full pl-9 text-sm" placeholder="Search FPO name or district" value={search} onChange={(event) => setSearch(event.target.value)} data-testid="input-search-fpos" /></label><SelectField label="State" value={state} options={['', ...states]} onChange={setState} /><SelectField label="Crop" value={crop} options={['', ...cropOptions]} onChange={setCrop} /><button onClick={() => { setSearch(''); setState(''); setCrop(''); }} className="mt-auto inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-border px-3 text-sm font-semibold hover:bg-muted" data-testid="button-clear-filters"><ListFilter className="h-4 w-4" /> Clear</button></div></div>{isLoading && !data ? <LoadingPage /> : fpos.length ? <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{fpos.map((fpo, index) => <FpoCard fpo={fpo} key={fpo.id} index={index} />)}</div> : <EmptyOrError error={isError} label="No FPOs match these filters" />}</div>;
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow={t('fpos.eyebrow')}
+        title={t('fpos.title')}
+        description={t('fpos.description')}
+      />
+      <div className="panel p-4 sm:p-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 items-end gap-3.5">
+          <div>
+            <label className="mb-2 block text-xs font-semibold text-foreground">{t('fpos.searchLabel')}</label>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                className="field h-11 w-full pl-9 text-sm"
+                placeholder={t('fpos.searchPlaceholder')}
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                data-testid="input-search-fpos"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="mb-2 block text-xs font-semibold text-foreground">{t('fpos.stateLabel')}</label>
+            <select
+              className="field h-11 w-full text-sm"
+              value={state}
+              onChange={(event) => setState(event.target.value)}
+              data-testid="select-state"
+            >
+              <option value="">{t('fpos.allStates')}</option>
+              {states.map((s) => (
+                <option key={s} value={s}>{localizeState(s)}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-2 block text-xs font-semibold text-foreground">{t('fpos.cropLabel')}</label>
+            <select
+              className="field h-11 w-full text-sm"
+              value={crop}
+              onChange={(event) => setCrop(event.target.value)}
+              data-testid="select-crop"
+            >
+              <option value="">{t('fpos.allCrops')}</option>
+              {cropOptions.map((c) => (
+                <option key={c} value={c}>{localizeCrop(c)}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <button
+              onClick={() => { setSearch(''); setState(''); setCrop(''); }}
+              className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 text-sm font-semibold hover:bg-muted transition-colors"
+              data-testid="button-clear-filters"
+            >
+              <ListFilter className="h-4 w-4 text-muted-foreground" /> {t('fpos.clearFilters')}
+            </button>
+          </div>
+        </div>
+      </div>
+      {isLoading && !data ? (
+        <LoadingPage />
+      ) : fpos.length ? (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {fpos.map((fpo, index) => <FpoCard fpo={fpo} key={fpo.id} index={index} />)}
+        </div>
+      ) : (
+        <EmptyOrError error={isError} label={t('fpos.noResults')} />
+      )}
+    </div>
+  );
 }
 
 function FpoCard({ fpo, index }: { fpo: Fpo; index?: number }) {
-  return <Link href={`/farmer/fpos/${fpo.id}`} className={`panel lift enter enter-delay-${Math.min((index || 0) + 1, 3)} block overflow-hidden p-5`} data-testid={`card-fpo-${fpo.id}`}><div className="flex items-start justify-between gap-3"><span className="grid h-11 w-11 place-items-center rounded-xl bg-primary/10 text-primary"><Sprout className="h-5 w-5" /></span><StatusPill status={fpo.status} /></div><h2 className="mt-6 font-display text-xl font-bold leading-tight">{fpo.name}</h2><p className="mt-2 flex items-center gap-1 text-xs text-muted-foreground"><MapPin className="h-3.5 w-3.5" /> {fpo.block}, {fpo.district}, {fpo.state}</p><p className="mt-4 line-clamp-2 text-sm leading-6 text-muted-foreground">{fpo.description}</p><div className="mt-5 flex items-center justify-between border-t border-border pt-4"><span className="text-xs text-muted-foreground"><strong className="text-foreground">{fpo.memberCount}</strong> members</span><span className="text-xs font-semibold text-accent">View profile <ArrowRight className="ml-1 inline h-3.5 w-3.5" /></span></div></Link>;
+  const { t, localizeState, localizeCrop } = useLang();
+  return (
+    <Link
+      href={`/farmer/fpos/${fpo.id}`}
+      className={`panel lift enter enter-delay-${Math.min((index || 0) + 1, 3)} flex flex-col justify-between overflow-hidden p-5 h-full`}
+      data-testid={`card-fpo-${fpo.id}`}
+    >
+      <div>
+        <div className="flex items-start justify-between gap-3">
+          <span className="grid h-11 w-11 place-items-center rounded-xl bg-primary/10 text-primary">
+            <Sprout className="h-5 w-5" />
+          </span>
+          <StatusPill status={fpo.status} />
+        </div>
+        <h2 className="mt-5 font-display text-xl font-bold leading-tight">{fpo.name}</h2>
+        <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+          <MapPin className="h-3.5 w-3.5 shrink-0 text-accent" /> {fpo.block}, {fpo.district}, {localizeState(fpo.state)}
+        </p>
+        <p className="mt-3.5 line-clamp-2 text-sm leading-relaxed text-muted-foreground">{fpo.description}</p>
+        <div className="mt-4 flex flex-wrap gap-1.5">
+          {fpo.crops.slice(0, 3).map((crop) => (
+            <span key={crop} className="rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium text-foreground">
+              {localizeCrop(crop)}
+            </span>
+          ))}
+          {fpo.crops.length > 3 ? (
+            <span className="rounded-md bg-muted/60 px-1.5 py-0.5 text-[11px] text-muted-foreground">
+              +{fpo.crops.length - 3}
+            </span>
+          ) : null}
+        </div>
+      </div>
+      <div className="mt-5 flex items-center justify-between border-t border-border pt-4">
+        <span className="text-xs text-muted-foreground">
+          <strong className="text-foreground font-semibold">{fpo.memberCount}</strong> {t('fpos.membersLabel')}
+        </span>
+        <span className="inline-flex items-center gap-1 text-xs font-semibold text-accent hover:underline">
+          {t('fpos.viewProfile')} <ArrowRight className="h-3.5 w-3.5" />
+        </span>
+      </div>
+    </Link>
+  );
 }
 
 function FpoProfile() {
   const { id = 'fpo-1' } = useParams<{ id: string }>();
+  const { t, localizeState, localizeCrop } = useLang();
   const { data, isLoading } = useGetFpo(id, { query: { enabled: Boolean(id), queryKey: getGetFpoQueryKey(id) } });
   const fpo = data && typeof data === 'object' ? data : fallbackFpos.find((item) => item.id === id) || fallbackFpos[0];
   if (isLoading && !data) return <LoadingPage />;
-  return <div className="mx-auto max-w-5xl"><Link href="/farmer/fpos" className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground" data-testid="link-back-fpos"><ChevronLeft className="h-4 w-4" /> All FPOs</Link><div className="panel overflow-hidden"><div className="bg-primary p-6 text-primary-foreground sm:p-9"><div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-start"><div className="flex items-start gap-4"><span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-sidebar-primary text-sidebar-primary-foreground"><Sprout className="h-7 w-7" /></span><div><StatusPill status={fpo.status} /><h1 className="mt-3 max-w-xl font-display text-3xl font-bold tracking-tight">{fpo.name}</h1><p className="mt-2 flex items-center gap-1.5 text-sm text-primary-foreground/70"><MapPin className="h-4 w-4" /> {fpo.block}, {fpo.district}, {fpo.state}</p></div></div><Link href={`/farmer/join/${fpo.id}`} className="inline-flex items-center justify-center gap-2 rounded-xl bg-sidebar-primary px-4 py-3 text-sm font-bold text-sidebar-primary-foreground hover:opacity-90" data-testid="link-join-fpo">Request membership <ArrowRight className="h-4 w-4" /></Link></div></div><div className="grid gap-6 p-6 sm:p-9 lg:grid-cols-[1.1fr_.9fr]"><div><p className="font-mono-app text-[10px] uppercase tracking-[.18em] text-accent">About this collective</p><p className="mt-3 max-w-xl text-base leading-7 text-muted-foreground">{fpo.description}</p><div className="mt-8 grid gap-4 sm:grid-cols-3"><Metric label="Members" value={String(fpo.memberCount)} /><Metric label="Land represented" value={`${fpo.totalArea} ac`} /><Metric label="Villages" value={String(fpo.villages.length)} /></div><div className="mt-8"><h2 className="font-display text-xl font-bold">What members grow</h2><div className="mt-3 flex flex-wrap gap-2">{fpo.crops.map((crop) => <span className="rounded-full bg-muted px-3 py-2 text-xs font-semibold" key={crop}>{crop}</span>)}</div></div></div><div className="rounded-2xl bg-muted/50 p-5"><p className="font-mono-app text-[10px] uppercase tracking-[.18em] text-muted-foreground">Contact & reach</p><div className="mt-5 space-y-5"><div><p className="text-xs text-muted-foreground">Secretary</p><p className="mt-1 text-sm font-semibold">{fpo.contactName}</p></div><div><p className="text-xs text-muted-foreground">Phone</p><p className="mt-1 font-mono-app text-sm font-medium">{fpo.contactMobile}</p></div><div><p className="text-xs text-muted-foreground">Villages served</p><p className="mt-1 text-sm font-semibold leading-6">{fpo.villages.join(' · ')}</p></div><div><p className="text-xs text-muted-foreground">Registration</p><p className="mt-1 font-mono-app text-sm font-medium">{fpo.registrationNumber}</p></div></div></div></div></div></div>;
+  return (
+    <div className="mx-auto max-w-5xl">
+      <Link href="/farmer/fpos" className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground" data-testid="link-back-fpos">
+        <ChevronLeft className="h-4 w-4" /> {t('fpos.allFpos')}
+      </Link>
+      <div className="panel overflow-hidden">
+        <div className="bg-primary p-6 text-primary-foreground sm:p-9">
+          <div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-start">
+            <div className="flex items-start gap-4">
+              <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-sidebar-primary text-sidebar-primary-foreground">
+                <Sprout className="h-7 w-7" />
+              </span>
+              <div>
+                <StatusPill status={fpo.status} />
+                <h1 className="mt-3 max-w-xl font-display text-3xl font-bold tracking-tight">{fpo.name}</h1>
+                <p className="mt-2 flex items-center gap-1.5 text-sm text-primary-foreground/70">
+                  <MapPin className="h-4 w-4" /> {fpo.block}, {fpo.district}, {localizeState(fpo.state)}
+                </p>
+              </div>
+            </div>
+            <Link href={`/farmer/join/${fpo.id}`} className="inline-flex items-center justify-center gap-2 rounded-xl bg-sidebar-primary px-4 py-3 text-sm font-bold text-sidebar-primary-foreground hover:opacity-90" data-testid="link-join-fpo">
+              {t('fpos.requestMembership')} <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </div>
+        <div className="grid gap-6 p-6 sm:p-9 lg:grid-cols-[1.1fr_.9fr]">
+          <div>
+            <p className="font-mono-app text-[10px] uppercase tracking-[.18em] text-accent">{t('fpos.aboutCollective')}</p>
+            <p className="mt-3 max-w-xl text-base leading-7 text-muted-foreground">{fpo.description}</p>
+            <div className="mt-8 grid gap-4 sm:grid-cols-3">
+              <Metric label={t('fpos.membersLabel')} value={String(fpo.memberCount)} />
+              <Metric label={t('fpos.landRepresented')} value={`${fpo.totalArea} ac`} />
+              <Metric label={t('fpos.villages')} value={String(fpo.villages.length)} />
+            </div>
+            <div className="mt-8">
+              <h2 className="font-display text-xl font-bold">{t('fpos.whatMembersGrow')}</h2>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {fpo.crops.map((crop) => (
+                  <span className="rounded-full bg-muted px-3 py-2 text-xs font-semibold" key={crop}>
+                    {localizeCrop(crop)}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="rounded-2xl bg-muted/50 p-5">
+            <p className="font-mono-app text-[10px] uppercase tracking-[.18em] text-muted-foreground">{t('fpos.contactReach')}</p>
+            <div className="mt-5 space-y-5">
+              <div>
+                <p className="text-xs text-muted-foreground">{t('fpos.secretary')}</p>
+                <p className="mt-1 text-sm font-semibold">{fpo.contactName}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">{t('fpos.phone')}</p>
+                <p className="mt-1 font-mono-app text-sm font-medium">{fpo.contactMobile}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">{t('fpos.villagesServed')}</p>
+                <p className="mt-1 text-sm font-semibold leading-6">{fpo.villages.join(' · ')}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">{t('fpos.registration')}</p>
+                <p className="mt-1 font-mono-app text-sm font-medium">{fpo.registrationNumber}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function Metric({ label, value }: { label: string; value: string }) {
@@ -966,6 +1152,7 @@ function Metric({ label, value }: { label: string; value: string }) {
 
 function JoinFpo() {
   const { id = 'fpo-1' } = useParams<{ id: string }>();
+  const { t, localizeState, localizeCrop } = useLang();
   const fpo = fallbackFpos.find((item) => item.id === id) || fallbackFpos[0];
   const [stage, setStage] = useState<'details' | 'otp' | 'done'>('details');
   const [otp, setOtp] = useState('');
@@ -974,12 +1161,94 @@ function JoinFpo() {
   const [requestId, setRequestId] = useState('');
   const queryClient = useQueryClient();
   const submit = () => createRequest.mutate({ data: { fpoId: fpo.id, name: form.name, village: form.village, mobile: form.mobile, landholding: Number(form.landholding), crops: [form.crops] } }, { onSuccess: (request) => { setRequestId(request.requestId); setStage('done'); queryClient.invalidateQueries({ queryKey: getGetJoinRequestQueryKey(request.requestId) }); } });
-  return <div className="mx-auto max-w-4xl"><Link href={`/farmer/fpos/${fpo.id}`} className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground" data-testid="link-back-profile"><ChevronLeft className="h-4 w-4" /> Back to {fpo.name}</Link><div className="grid gap-6 lg:grid-cols-[.75fr_1.25fr]"><div className="rounded-2xl bg-primary p-6 text-primary-foreground sm:p-8"><p className="font-mono-app text-[10px] uppercase tracking-[.18em] text-primary-foreground/55">Membership request</p><h1 className="mt-5 font-display text-3xl font-bold leading-tight">A stronger harvest starts together.</h1><p className="mt-4 text-sm leading-6 text-primary-foreground/70">Tell {fpo.name} a little about yourself. Your request will go to their secretary for review.</p><div className="mt-10 border-t border-primary-foreground/15 pt-5"><p className="text-xs text-primary-foreground/55">Joining</p><p className="mt-1 text-sm font-semibold">{fpo.name}</p><p className="mt-1 text-xs text-primary-foreground/60">{fpo.district}, {fpo.state}</p></div></div><div className="panel p-6 sm:p-8">{stage === 'details' ? <><p className="font-mono-app text-[10px] uppercase tracking-[.18em] text-accent">Step 01 / your details</p><h2 className="mt-2 font-display text-2xl font-bold">Let the FPO know you.</h2><div className="mt-7 grid gap-4 sm:grid-cols-2"><Field label="Full name" value={form.name} onChange={(value) => setForm({ ...form, name: value })} /><Field label="Village" value={form.village} onChange={(value) => setForm({ ...form, village: value })} /><Field label="Mobile number" value={form.mobile} onChange={(value) => setForm({ ...form, mobile: value })} /><Field label="Landholding (acres)" value={form.landholding} onChange={(value) => setForm({ ...form, landholding: value })} /><SelectField label="Main crop" value={form.crops} options={cropOptions} onChange={(value) => setForm({ ...form, crops: value })} /></div><button onClick={() => setStage('otp')} disabled={!form.name || !form.mobile} className="mt-7 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-45" data-testid="button-send-otp">Send verification code <ArrowRight className="h-4 w-4" /></button></> : null}{stage === 'otp' ? <><p className="font-mono-app text-[10px] uppercase tracking-[.18em] text-accent">Step 02 / verify mobile</p><h2 className="mt-2 font-display text-2xl font-bold">A quick check for your safety.</h2><p className="mt-3 text-sm leading-6 text-muted-foreground">We sent a four-digit code to {form.mobile}. For this demo, use <span className="font-mono-app font-semibold text-foreground">1234</span>.</p><label className="mt-7 block"><span className="mb-2 block text-xs font-semibold">Verification code</span><input className="field w-full text-center font-mono-app text-lg tracking-[.5em]" value={otp} onChange={(event) => setOtp(event.target.value)} maxLength={4} inputMode="numeric" placeholder="0000" data-testid="input-otp" /></label><button onClick={submit} disabled={otp !== '1234' || createRequest.isPending} className="mt-7 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-45" data-testid="button-verify-submit">{createRequest.isPending ? 'Sending request…' : 'Verify and send request'} <ArrowRight className="h-4 w-4" /></button><button onClick={() => setStage('details')} className="mt-3 w-full rounded-xl px-4 py-2.5 text-sm font-semibold text-muted-foreground hover:bg-muted" data-testid="button-edit-join-details">Edit details</button>{createRequest.isError ? <p className="mt-3 text-sm text-destructive">We could not send the request. Try again.</p> : null}</> : null}{stage === 'done' ? <JoinConfirmation requestId={requestId} fpo={fpo} /> : null}</div></div></div>;
+
+  return (
+    <div className="mx-auto max-w-4xl">
+      <Link href={`/farmer/fpos/${fpo.id}`} className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground" data-testid="link-back-profile">
+        <ChevronLeft className="h-4 w-4" /> {t('fpos.backTo', { name: fpo.name })}
+      </Link>
+      <div className="grid gap-6 lg:grid-cols-[.75fr_1.25fr]">
+        <div className="rounded-2xl bg-primary p-6 text-primary-foreground sm:p-8">
+          <p className="font-mono-app text-[10px] uppercase tracking-[.18em] text-primary-foreground/55">{t('fpos.membershipRequest')}</p>
+          <h1 className="mt-5 font-display text-3xl font-bold leading-tight">{t('fpos.joinTitle')}</h1>
+          <p className="mt-4 text-sm leading-6 text-primary-foreground/70">{t('fpos.joinSubtitle', { name: fpo.name })}</p>
+          <div className="mt-10 border-t border-primary-foreground/15 pt-5">
+            <p className="text-xs text-primary-foreground/55">{t('fpos.joining')}</p>
+            <p className="mt-1 text-sm font-semibold">{fpo.name}</p>
+            <p className="mt-1 text-xs text-primary-foreground/60">{fpo.district}, {localizeState(fpo.state)}</p>
+          </div>
+        </div>
+        <div className="panel p-6 sm:p-8">
+          {stage === 'details' ? (
+            <>
+              <p className="font-mono-app text-[10px] uppercase tracking-[.18em] text-accent">{t('fpos.step1')}</p>
+              <h2 className="mt-2 font-display text-2xl font-bold">{t('fpos.step1Title')}</h2>
+              <div className="mt-7 grid gap-4 sm:grid-cols-2">
+                <Field label={t('fpos.fullName')} value={form.name} onChange={(value) => setForm({ ...form, name: value })} />
+                <Field label={t('fpos.village')} value={form.village} onChange={(value) => setForm({ ...form, village: value })} />
+                <Field label={t('fpos.mobile')} value={form.mobile} onChange={(value) => setForm({ ...form, mobile: value })} />
+                <Field label={t('fpos.landholding')} value={form.landholding} onChange={(value) => setForm({ ...form, landholding: value })} />
+                <label className="block sm:col-span-2">
+                  <span className="mb-2 block text-xs font-semibold text-foreground">{t('fpos.mainCrop')}</span>
+                  <select className="field w-full text-sm" value={form.crops} onChange={(e) => setForm({ ...form, crops: e.target.value })}>
+                    {cropOptions.map((c) => (
+                      <option key={c} value={c}>{localizeCrop(c)}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <button onClick={() => setStage('otp')} disabled={!form.name || !form.mobile} className="mt-7 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-45" data-testid="button-send-otp">
+                {t('fpos.sendOtp')} <ArrowRight className="h-4 w-4" />
+              </button>
+            </>
+          ) : null}
+          {stage === 'otp' ? (
+            <>
+              <p className="font-mono-app text-[10px] uppercase tracking-[.18em] text-accent">{t('fpos.step2')}</p>
+              <h2 className="mt-2 font-display text-2xl font-bold">{t('fpos.step2Title')}</h2>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">{t('fpos.otpSentNote', { mobile: form.mobile })}</p>
+              <label className="mt-7 block">
+                <span className="mb-2 block text-xs font-semibold">{t('fpos.otpLabel')}</span>
+                <input className="field w-full text-center font-mono-app text-lg tracking-[.5em]" value={otp} onChange={(event) => setOtp(event.target.value)} maxLength={4} inputMode="numeric" placeholder="0000" data-testid="input-otp" />
+              </label>
+              <button onClick={submit} disabled={otp !== '1234' || createRequest.isPending} className="mt-7 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-45" data-testid="button-verify-submit">
+                {createRequest.isPending ? t('fpos.sendingRequest') : t('fpos.verifySubmit')} <ArrowRight className="h-4 w-4" />
+              </button>
+              <button onClick={() => setStage('details')} className="mt-3 w-full rounded-xl px-4 py-2.5 text-sm font-semibold text-muted-foreground hover:bg-muted" data-testid="button-edit-join-details">
+                {t('fpos.editDetails')}
+              </button>
+              {createRequest.isError ? <p className="mt-3 text-sm text-destructive">{t('fpos.sendError')}</p> : null}
+            </>
+          ) : null}
+          {stage === 'done' ? <JoinConfirmation requestId={requestId} fpo={fpo} /> : null}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function JoinConfirmation({ requestId, fpo }: { requestId: string; fpo: Fpo }) {
+  const { t, localizeStatus } = useLang();
   const { data } = useGetJoinRequest(requestId || 'pending', { query: { enabled: Boolean(requestId), queryKey: getGetJoinRequestQueryKey(requestId || 'pending') } });
-  return <div className="py-4 text-center"><span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-emerald-100 text-emerald-700"><Check className="h-7 w-7" /></span><p className="mt-6 font-mono-app text-[10px] uppercase tracking-[.2em] text-accent">Request sent</p><h2 className="mt-2 font-display text-3xl font-bold">You are on the way in.</h2><p className="mx-auto mt-3 max-w-md text-sm leading-6 text-muted-foreground">{fpo.name} has your request. The secretary will call you after a quick review.</p><div className="mx-auto mt-7 max-w-sm rounded-xl bg-muted/60 p-4 text-left"><p className="text-xs text-muted-foreground">Request reference</p><p className="mt-1 font-mono-app text-sm font-semibold">{data?.requestId || requestId || 'Pending'}</p><p className="mt-3 text-xs text-muted-foreground">Status</p><p className="mt-1 text-sm font-semibold">{data?.status || 'Pending review'}</p></div><Link href="/farmer/fpos" className="mt-7 inline-flex items-center gap-2 text-sm font-semibold text-accent hover:underline" data-testid="link-back-discovery">Explore more FPOs <ArrowRight className="h-4 w-4" /></Link></div>;
+  return (
+    <div className="py-4 text-center">
+      <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-emerald-100 text-emerald-700">
+        <Check className="h-7 w-7" />
+      </span>
+      <p className="mt-6 font-mono-app text-[10px] uppercase tracking-[.2em] text-accent">{t('fpos.requestSentPill')}</p>
+      <h2 className="mt-2 font-display text-3xl font-bold">{t('fpos.requestSentTitle')}</h2>
+      <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-muted-foreground">{t('fpos.requestSentBody', { name: fpo.name })}</p>
+      <div className="mx-auto mt-7 max-w-sm rounded-xl bg-muted/60 p-4 text-left">
+        <p className="text-xs text-muted-foreground">{t('fpos.requestRef')}</p>
+        <p className="mt-1 font-mono-app text-sm font-semibold">{data?.requestId || requestId || 'Pending'}</p>
+        <p className="mt-3 text-xs text-muted-foreground">{t('fpos.statusLabel')}</p>
+        <p className="mt-1 text-sm font-semibold">{localizeStatus ? localizeStatus(data?.status || 'Pending') : data?.status || 'Pending review'}</p>
+      </div>
+      <Link href="/farmer/fpos" className="mt-7 inline-flex items-center gap-2 text-sm font-semibold text-accent hover:underline" data-testid="link-back-discovery">
+        {t('fpos.exploreMore')} <ArrowRight className="h-4 w-4" />
+      </Link>
+    </div>
+  );
 }
 
 function AdminFpos() {
@@ -2430,24 +2699,32 @@ function BuyerInvoices() {
   );
 }
 
-type ChatMessage = { id: number; role: 'agent' | 'user'; text: string };
+type ChatMessage = { id: number; role: 'agent' | 'user'; text: string; time?: string };
 
 function Chatbot() {
   const { t, locale } = useLang();
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const listRef = useRef<HTMLDivElement>(null);
   const replyTimer = useRef<number | undefined>(undefined);
 
+  const getCurrentTime = () => {
+    const d = new Date();
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
   useEffect(() => {
-    setMessages([{ id: Date.now(), role: 'agent', text: t('chat.greeting') }]);
+    setMessages([{ id: Date.now(), role: 'agent', text: t('chat.greeting'), time: getCurrentTime() }]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [locale]);
 
   useEffect(() => {
-    if (open) listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' });
-  }, [messages, open]);
+    if (open) {
+      listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' });
+    }
+  }, [messages, open, isTyping]);
 
   useEffect(() => () => window.clearTimeout(replyTimer.current), []);
 
@@ -2456,14 +2733,18 @@ function Chatbot() {
     { label: t('chat.quick2'), reply: t('chat.replyPickup') },
     { label: t('chat.quick3'), reply: t('chat.replyRate') },
     { label: t('chat.quick4'), reply: t('chat.replyJoin') },
+    { label: t('chat.quick5'), reply: t('chat.replyEscrow') },
+    { label: t('chat.quick6'), reply: t('chat.replyLogistics') },
   ];
 
   const answerFor = (question: string): string => {
     const q = question.toLowerCase();
-    if (/(pay|payment|money|rupee|bank|escrow|भुगतान|पैस|रुपय|बैंक|देयक|बँक|रक्कम)/.test(q)) return t('chat.replyPayment');
-    if (/(pick|collect|truck|logistic|पिकअप|संग्रह|वाहतूक|ट्रक|वाहन)/.test(q)) return t('chat.replyPickup');
-    if (/(rate|price|mandi|market|दर|भाव|मंडी|किंमत|बाजार)/.test(q)) return t('chat.replyRate');
-    if (/(join|member|fpo|सदस्य|जॉइन|सभासद|समूह|गट)/.test(q)) return t('chat.replyJoin');
+    if (/(escrow|dbt|nabard|safe|vault|सुरक्षा|एस्क्रो|खात|डिपॉजिट|रक्कम)/.test(q)) return t('chat.replyEscrow');
+    if (/(reefer|cold|storage|freeze|pooling|truck|saving|बचत|कोल्ड|गाड़ी|वाहतूक|भाडे|थंड)/.test(q)) return t('chat.replyLogistics');
+    if (/(pay|payment|money|rupee|bank|payout|balance|भुगतान|पैस|रुपय|बैंक|देयक|बँक|पैसे)/.test(q)) return t('chat.replyPayment');
+    if (/(pick|collect|schedule|route|पिकअप|संग्रह|ट्रक|वाहन|वेळ)/.test(q)) return t('chat.replyPickup');
+    if (/(rate|price|mandi|market|apmc|cost|दर|भाव|मंडी|किंमत|बाजार|किंमती)/.test(q)) return t('chat.replyRate');
+    if (/(join|member|fpo|register|apply|सदस्य|जॉइन|सभासद|समूह|गट|नोंदणी)/.test(q)) return t('chat.replyJoin');
     return t('chat.replyFallback');
   };
 
@@ -2471,50 +2752,135 @@ function Chatbot() {
     const value = text.trim();
     if (!value) return;
     setInput('');
-    setMessages((current) => [...current, { id: Date.now(), role: 'user', text: value }]);
+    const time = getCurrentTime();
+    setMessages((current) => [...current, { id: Date.now(), role: 'user', text: value, time }]);
+    setIsTyping(true);
     window.clearTimeout(replyTimer.current);
     replyTimer.current = window.setTimeout(() => {
-      setMessages((current) => [...current, { id: Date.now() + 1, role: 'agent', text: canned ?? answerFor(value) }]);
-    }, 520);
+      setIsTyping(false);
+      setMessages((current) => [...current, { id: Date.now() + 1, role: 'agent', text: canned ?? answerFor(value), time: getCurrentTime() }]);
+    }, 600);
+  };
+
+  const handleClear = () => {
+    setMessages([{ id: Date.now(), role: 'agent', text: t('chat.greeting'), time: getCurrentTime() }]);
   };
 
   return (
     <div className="fixed bottom-5 right-5 z-40 flex flex-col items-end gap-3" data-testid="chatbot">
       {open ? (
-        <div className="flex w-[min(360px,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
-          <div className="flex items-center gap-3 border-b border-border bg-[hsl(var(--primary)/.06)] p-4">
-            <span className="relative grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground">
-              <Bot className="h-5 w-5" />
-              <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card bg-emerald-500" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="font-display text-sm font-bold">{t('chat.title')}</p>
-              <p className="truncate text-[11px] text-muted-foreground">{t('chat.subtitle')}</p>
+        <div className="flex w-[min(380px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl transition-all">
+          <div className="flex items-center justify-between border-b border-border bg-[hsl(var(--primary)/.06)] p-3.5 sm:p-4">
+            <div className="flex items-center gap-3">
+              <span className="relative grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+                <Bot className="h-5 w-5" />
+                <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card bg-emerald-500" />
+              </span>
+              <div>
+                <p className="font-display text-sm font-bold text-foreground">{t('chat.title')}</p>
+                <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+                  {t('chat.statusOnline')}
+                </p>
+              </div>
             </div>
-            <button onClick={() => setOpen(false)} className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label={t('chat.close')} data-testid="button-chatbot-close"><X className="h-4 w-4" /></button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={handleClear}
+                className="rounded-lg px-2 py-1 text-[11px] font-semibold text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                title={t('chat.clear')}
+                data-testid="button-chatbot-clear"
+              >
+                {t('chat.clear')}
+              </button>
+              <button
+                onClick={() => setOpen(false)}
+                className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                aria-label={t('chat.close')}
+                data-testid="button-chatbot-close"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
           </div>
-          <div ref={listRef} className="flex max-h-[340px] min-h-[220px] flex-col gap-3 overflow-y-auto p-4" data-testid="chatbot-messages">
+
+          <div ref={listRef} className="flex max-h-[350px] min-h-[220px] flex-col gap-3 overflow-y-auto p-4" data-testid="chatbot-messages">
             {messages.map((message) => (
-              <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed ${message.role === 'user' ? 'rounded-br-md bg-primary text-primary-foreground' : 'rounded-bl-md bg-muted text-foreground'}`}>{message.text}</div>
+              <div key={message.id} className={`flex flex-col ${message.role === 'user' ? 'items-end' : 'items-start'}`}>
+                <div
+                  className={`max-w-[88%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed ${
+                    message.role === 'user'
+                      ? 'rounded-br-sm bg-primary text-primary-foreground shadow-sm'
+                      : 'rounded-bl-sm border border-border bg-muted/60 text-foreground'
+                  }`}
+                >
+                  {message.text}
+                </div>
+                {message.time ? (
+                  <span className="mt-1 px-1 font-mono-app text-[9px] text-muted-foreground/75">{message.time}</span>
+                ) : null}
               </div>
             ))}
+            {isTyping ? (
+              <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm border border-border bg-muted/60 px-3.5 py-2.5 text-xs text-muted-foreground w-fit">
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary" style={{ animationDelay: '0ms' }} />
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary" style={{ animationDelay: '150ms' }} />
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary" style={{ animationDelay: '300ms' }} />
+              </div>
+            ) : null}
           </div>
-          <div className="flex flex-wrap gap-1.5 border-t border-border px-4 py-3">
+
+          <div className="flex flex-wrap gap-1.5 border-t border-border bg-muted/20 px-3.5 py-2.5 max-h-[96px] overflow-y-auto">
             {quickReplies.map((item) => (
-              <button key={item.label} onClick={() => send(item.label, item.reply)} className="rounded-full border border-border bg-card px-3 py-1.5 text-[11px] font-semibold text-muted-foreground hover:border-primary/40 hover:bg-muted hover:text-foreground" data-testid="chatbot-quick-reply">{item.label}</button>
+              <button
+                key={item.label}
+                onClick={() => send(item.label, item.reply)}
+                className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-medium text-muted-foreground hover:border-primary/40 hover:bg-muted hover:text-foreground transition-colors"
+                data-testid="chatbot-quick-reply"
+              >
+                {item.label}
+              </button>
             ))}
           </div>
-          <form onSubmit={(event) => { event.preventDefault(); send(input); }} className="flex items-center gap-2 border-t border-border p-3">
-            <input value={input} onChange={(event) => setInput(event.target.value)} placeholder={t('chat.placeholder')} className="field w-full text-xs" data-testid="input-chatbot" />
-            <button type="submit" className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-40" disabled={!input.trim()} aria-label={t('chat.send')} data-testid="button-chatbot-send"><Send className="h-4 w-4" /></button>
+
+          <form onSubmit={(event) => { event.preventDefault(); send(input); }} className="flex items-center gap-2 border-t border-border bg-card p-3">
+            <input
+              value={input}
+              onChange={(event) => setInput(event.target.value)}
+              placeholder={t('chat.placeholder')}
+              className="field h-10 w-full text-xs"
+              data-testid="input-chatbot"
+            />
+            <button
+              type="submit"
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-40 shadow-sm transition-opacity"
+              disabled={!input.trim()}
+              aria-label={t('chat.send')}
+              data-testid="button-chatbot-send"
+            >
+              <Send className="h-4 w-4" />
+            </button>
           </form>
         </div>
       ) : null}
-      <button onClick={() => setOpen((current) => !current)} className="group relative grid h-14 w-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-xl transition-transform hover:scale-105" aria-label={open ? t('chat.close') : t('chat.open')} data-testid="button-chatbot-toggle">
+
+      <button
+        onClick={() => setOpen((current) => !current)}
+        className="group relative grid h-14 w-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-2xl transition-transform hover:scale-105 active:scale-95"
+        aria-label={open ? t('chat.close') : t('chat.open')}
+        data-testid="button-chatbot-toggle"
+      >
         {open ? <X className="h-6 w-6" /> : <MessageCircle className="h-6 w-6" />}
-        {!open ? <span className="absolute -right-0.5 -top-0.5 grid h-5 w-5 place-items-center rounded-full border-2 border-card bg-[hsl(var(--accent))] text-[10px] font-bold text-white">1</span> : null}
-        {!open ? <span className="pointer-events-none absolute right-full mr-3 hidden whitespace-nowrap rounded-lg bg-foreground px-2.5 py-1.5 text-xs font-semibold text-background sm:group-hover:block">{t('chat.open')}</span> : null}
+        {!open ? (
+          <span className="absolute -right-0.5 -top-0.5 grid h-5 w-5 place-items-center rounded-full border-2 border-card bg-accent text-[10px] font-bold text-accent-foreground">
+            1
+          </span>
+        ) : null}
+        {!open ? (
+          <span className="pointer-events-none absolute right-full mr-3 hidden whitespace-nowrap rounded-lg bg-foreground px-2.5 py-1.5 text-xs font-semibold text-background shadow-md sm:group-hover:block">
+            {t('chat.open')}
+          </span>
+        ) : null}
       </button>
     </div>
   );
