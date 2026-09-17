@@ -14,7 +14,7 @@ import {
 
 const router: IRouter = Router();
 
-router.post("/auth/sign-in", (req, res): void => {
+router.post("/auth/sign-in", async (req, res): Promise<void> => {
   res.setHeader("Cache-Control", "no-store");
   const input = SignInBody.safeParse(req.body);
   if (!input.success) {
@@ -28,19 +28,19 @@ router.post("/auth/sign-in", (req, res): void => {
     return;
   }
 
-  createSession(res, user, input.data.rememberMe ?? false);
+  await createSession(res, user, input.data.rememberMe ?? false);
   res.json(SignInResponse.parse({ authenticated: true, user }));
 });
 
-router.get("/auth/session", (req, res): void => {
+router.get("/auth/session", async (req, res): Promise<void> => {
   res.setHeader("Cache-Control", "no-store");
-  const user = currentUser(req);
+  const user = await currentUser(req);
   res.json(GetAuthSessionResponse.parse({ authenticated: Boolean(user), user }));
 });
 
-router.post("/auth/sign-out", (req, res): void => {
+router.post("/auth/sign-out", async (req, res): Promise<void> => {
   res.setHeader("Cache-Control", "no-store");
-  destroySession(req, res);
+  await destroySession(req, res);
   res.sendStatus(204);
 });
 

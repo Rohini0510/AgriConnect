@@ -1,9 +1,13 @@
 import {
+  createHmac,
   randomBytes,
   scryptSync,
   timingSafeEqual,
 } from "node:crypto";
 import type { NextFunction, Request, RequestHandler, Response } from "express";
+import { eq, lt } from "drizzle-orm";
+import { db } from "@workspace/db";
+import { authSessions } from "@workspace/db/schema";
 
 export type AuthRole = "farmer" | "fpo" | "admin";
 
@@ -17,11 +21,6 @@ export type AuthUser = {
 type Account = AuthUser & {
   passwordHash: Buffer;
   passwordSalt: Buffer;
-};
-
-type Session = {
-  user: AuthUser;
-  expiresAt: number;
 };
 
 declare global {
@@ -97,8 +96,6 @@ const accounts: Account[] = [
   createAccount("reviewer-asha", "admin", "Asha Menon"),
 ];
 
-const sessions = new Map<string, Session>();
-
 function publicUser(account: Account): AuthUser {
   return {
     id: account.id,
@@ -123,6 +120,14 @@ function cookieOptions(maxAge: number) {
   };
 }
 
+function sessionTokenHash(token: string): string {
+  return createHmac("sha256", sessionSecret).update(token).digest("hex");
+}
+
+async function purgeExpiredSessions(now = new Date()): Promise<void> {
+  await db.delete(authSessions).where(lt(authSessions.expiresAt, now));
+}
+
 export function authenticate(identity: string, password: string, role: AuthRole): AuthUser | null {
   const account = accounts.find(
     (candidate) =>
@@ -137,37 +142,56 @@ export function authenticate(identity: string, password: string, role: AuthRole)
   return publicUser(account);
 }
 
-export function createSession(res: Response, user: AuthUser, rememberMe: boolean): void {
+export async function createSession(res: Response, user: AuthUser, rememberMe: boolean): Promise<void> {
   const token = randomBytes(32).toString("base64url");
   const maxAge = rememberMe ? REMEMBERED_SESSION_TTL_MS : SESSION_TTL_MS;
-  sessions.set(token, { user, expiresAt: Date.now() + maxAge });
+  await purgeExpiredSessions();
+  await db.insert(authSessions).values({
+    tokenHash: sessionTokenHash(token),
+    userId: user.id,
+    role: user.role,
+    displayName: user.displayName,
+    identity: user.identity,
+    expiresAt: new Date(Date.now() + maxAge),
+  });
   res.cookie(SESSION_COOKIE, token, cookieOptions(maxAge));
 }
 
-export function destroySession(req: Request, res: Response): void {
+export async function destroySession(req: Request, res: Response): Promise<void> {
   const token = req.cookies?.[SESSION_COOKIE];
   if (typeof token === "string") {
-    sessions.delete(token);
+    await db.delete(authSessions).where(eq(authSessions.tokenHash, sessionTokenHash(token)));
   }
   res.clearCookie(SESSION_COOKIE, cookieOptions(0));
 }
 
-export function currentUser(req: Request): AuthUser | null {
+export async function currentUser(req: Request): Promise<AuthUser | null> {
   const token = req.cookies?.[SESSION_COOKIE];
   if (typeof token !== "string") return null;
 
-  const session = sessions.get(token);
+  const tokenHash = sessionTokenHash(token);
+  await purgeExpiredSessions();
+  const [session] = await db
+    .select()
+    .from(authSessions)
+    .where(eq(authSessions.tokenHash, tokenHash))
+    .limit(1);
   if (!session) return null;
-  if (session.expiresAt <= Date.now()) {
-    sessions.delete(token);
+  if (session.expiresAt.getTime() <= Date.now()) {
+    await db.delete(authSessions).where(eq(authSessions.tokenHash, tokenHash));
     return null;
   }
-  return session.user;
+  return {
+    id: session.userId,
+    role: session.role,
+    displayName: session.displayName,
+    identity: session.identity,
+  };
 }
 
 export function requireAuth(): RequestHandler {
-  return (req, res, next): void => {
-    const user = currentUser(req);
+  return async (req, res, next): Promise<void> => {
+    const user = await currentUser(req);
     if (!user) {
       res.status(401).json({ error: "Authentication required." });
       return;
