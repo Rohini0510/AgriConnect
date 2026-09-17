@@ -160,6 +160,23 @@ const cropOptions = ['Sugarcane', 'Ragi', 'Coconut', 'Millets', 'Tur dal', 'Soyb
 
 type Role = 'fpo' | 'farmer' | 'admin';
 
+function prototypeSession(role: Role): AuthSession {
+  const displayName = role === 'fpo' ? 'Prototype FPO secretary' : role === 'admin' ? 'Prototype review officer' : 'Prototype farmer';
+  return {
+    authenticated: true,
+    user: {
+      id: `prototype-${role}`,
+      role,
+      displayName,
+      identity: `prototype-${role}`,
+    },
+  };
+}
+
+function workspacePath(role: Role) {
+  return role === 'fpo' ? '/workspace' : role === 'farmer' ? '/farmer/fpos' : '/admin/fpos';
+}
+
 function statusTone(status?: string) {
   if (status === 'Verified' || status === 'Accepted') return 'bg-emerald-100 text-emerald-800 border-emerald-200';
   if (status === 'Rejected') return 'bg-rose-100 text-rose-800 border-rose-200';
@@ -492,10 +509,15 @@ function RoleLogin({ onSignedIn }: { onSignedIn: (session: AuthSession) => void 
       {
         onSuccess: (session) => {
           onSignedIn(session);
-          navigate(role === 'fpo' ? '/workspace' : role === 'farmer' ? '/farmer/fpos' : '/admin/fpos');
+          navigate(workspacePath(role));
         },
       },
     );
+  };
+
+  const skipLogin = () => {
+    onSignedIn(prototypeSession(role));
+    navigate(workspacePath(role));
   };
 
   return (
@@ -548,6 +570,10 @@ function RoleLogin({ onSignedIn }: { onSignedIn: (session: AuthSession) => void 
                    {signIn.isPending ? 'Checking details…' : 'Sign in'} <LogIn className="h-4 w-4" />
                 </button>
               </form>
+              <button type="button" onClick={skipLogin} className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-accent/45 bg-accent/5 px-4 py-3 text-sm font-semibold text-accent hover:bg-accent/10" data-testid={`button-skip-login-${role}`}>
+                Skip login <ArrowRight className="h-4 w-4" />
+              </button>
+              <p className="mt-2 text-center text-[11px] text-muted-foreground">Prototype access only · no account required</p>
                {signIn.isError ? <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-3 text-sm leading-5 text-rose-800" role="alert" data-testid={`text-login-${role}-error`}>That {option.label.toLowerCase()} did not work. Check your {isAdmin ? 'official email or employee ID' : isFpo ? 'registered mobile or email' : 'mobile number'} and password, then try again.</p> : null}
               <div className="mt-6 flex items-start gap-2 rounded-xl border border-[hsl(var(--accent)/.22)] bg-[hsl(var(--accent)/.07)] p-3.5 text-xs leading-5 text-muted-foreground">
                 <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
